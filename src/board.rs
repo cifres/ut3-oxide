@@ -49,7 +49,7 @@ impl Board {
         self.main_board[row] |= mask;
     }
 
-    pub fn _check_cell(&self, row: usize, column: usize, shape: u32) -> bool {
+    fn _check_cell(&self, row: usize, column: usize, shape: u32) -> bool {
         let offset = column * 2;
         let mask = 0b11 << offset;
 
@@ -57,7 +57,8 @@ impl Board {
         shape == result
     }
 
-    /* */
+    /* Miniboard Meta Data */
+
     //#[inline(always)]
     pub const fn set_meta_data(&mut self, miniboard: usize, flag_pos: u32, flag_size: u32, value: u32) {
         // clear the occupying bits
@@ -80,7 +81,7 @@ impl Board {
 
     /// Create a mask where there are only 1s over the 18 bits for the row
     /// with the remaining 14 being 0s to zero-out the row metadata.
-    pub fn get_row_cells(&self, row: usize) -> u32 {
+    fn get_row_cells(&self, row: usize) -> u32 {
         let mask = (1 << 18) - 1;
         self.main_board[row] & mask 
     }
@@ -89,7 +90,10 @@ impl Board {
     //    (self.main_board[row] >> 18).try_into().unwrap()
     //}
 
-    ///* Moves *///
+    //* Moves *//
+
+    /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply 
+    /// minboard status checks
     pub const fn do_move(&mut self, row: usize, column: usize, xoshape: u32) {
         self.set_cell(row, column, xoshape);
         self.prev_move = (row, column);
