@@ -46,6 +46,15 @@ mod tests {
         b.reset();
 
         // 3) miniboard coordinate correspondence/matching
+        let (_row, _column) = (2, 2);
+        let _corresponding_miniboard = Board::move_corresponding_miniboard(_row, _column);
+        assert_eq!(_corresponding_miniboard, 8);
+
+        assert!(b.is_valid_move(_row, _column));
+        b.do_move(_row, _column, 1);
+
+        assert!(b.is_valid_move(7, 7));
+        b.reset();
 
         // 4) exception of uncontestable minboard to play any other valid miniboard
         let (_row, _column) = (1, 1);
