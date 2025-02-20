@@ -120,11 +120,10 @@ impl Board {
 
     /// validate moves by ensuring that invalidity if:
     /// 1) cell is occupied
-    /// 2) miniboard is 'uncontested' i.e. won by X or O, or drawn
+    /// 2) miniboard is 'uncontestable' i.e. won by X or O, or drawn
     /// 3) miniboard coords don't correspond to previous move
-    ///  
-    /// exceptions: corresponding board is uncontestable -- then we play anywhere else where a cells is
-    /// empty, and it's board is contestable
+    /// 4) exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
+    ///     empty, and it's board is contestable
     pub fn is_valid_move(&self, row: usize, column: usize) -> bool {
 
         let cell = self.get_cell(row, column); 
