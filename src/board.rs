@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self, write};
 
 /// u32 board row format:
 /// most significant bit <- -> least significant bit
@@ -7,7 +7,7 @@ use std::fmt;
 pub mod flag {
     pub const MINIBOARD_STATUS:     u32     = 20;
     pub const STATUS_BIT_SIZE:      u32     = 0b11;
-    pub const STATUS_CONTESTABLE:     u8      = 0;
+    pub const STATUS_CONTESTABLE:   u8      = 0;
     pub const STATUS_X_WIN:         u8      = 1;
     pub const STATUS_O_WIN:         u8      = 2;
     pub const STATUS_DRAW:          u8      = 3;
@@ -79,11 +79,11 @@ impl Board {
     // where row n holds miniboard n's metadata
     /* Row-wise operations  */
 
-    /// Create a mask where there are only 1s over the 18 bits for the row
-    /// with the remaining 14 being 0s to zero-out the row metadata.
-    fn get_row_cells(&self, row: usize) -> u32 {
+    /// Create a mask where there are only 1s over the `18` bits for the u32 row
+    /// with the remaining `14` being 0s to zero-out the row metadata.
+    const fn get_row_cells(&self, row: u32) -> u32 {
         let mask = (1 << 18) - 1;
-        self.main_board[row] & mask 
+        self.main_board[row as usize] & mask 
     }
     
     //pub fn _get_row_metadata(&self, row: usize) -> u16 {
@@ -94,7 +94,7 @@ impl Board {
 
     /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply 
     /// minboard status checks
-    pub const fn do_move(&mut self, row: usize, column: usize, xoshape: u32) {
+    pub fn do_move(&mut self, row: usize, column: usize, xoshape: u32) {
         self.set_cell(row, column, xoshape);
         self.prev_move = (row, column);
         let miniboard = Self::move_miniboard(row, column);
@@ -124,14 +124,15 @@ impl Board {
     /// 3) miniboard coords don't correspond to previous move
     /// 4) exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
     ///     empty, and it's board is contestable
-    pub fn is_valid_move(&self, row: usize, column: usize) -> bool {
+    pub const fn is_valid_move(&self, row: usize, column: usize) -> bool {
 
         let cell = self.get_cell(row, column); 
         let miniboard = Self::move_miniboard(row, column);
         let miniboard_status = self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
 
-        if self.prev_move == (flag::NEW_GAME as usize, flag::NEW_GAME as usize) {
-            println!("valid {:?}", (row, column));
+        //if self.prev_move == (flag::NEW_GAME as usize, flag::NEW_GAME as usize) {
+        if self.prev_move.0 as u8 == flag::NEW_GAME && self.prev_move.1 as u8 == flag::NEW_GAME {
+            //println!("valid {:?}", (row, column));
             return true;
         }
 
@@ -156,13 +157,19 @@ impl Board {
             return false;
         }
 
-        println!("valid {:?}", (row, column));
+        //println!("valid {:?}", (row, column));
         true
     }
 
-    pub const fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.prev_move = (flag::NEW_GAME as usize, flag::NEW_GAME as usize);
         self.main_board = [0; 9];
+    }
+
+    /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
+    /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
+    pub const fn get_game_status() -> u8 {
+        todo!()
     }
 }
 
@@ -179,12 +186,13 @@ impl fmt::Display for Board {
             for row in 0..9 {
                 for column in 0..9 { 
                     let cell = self.get_cell(row, column);
-                    write!(f, "{row},{column} ")?;
+                    //write!(f, "{row},{column} ")?;
                     if cell == 1 {
+                        write!(f, "X ")?;
                     } else if cell == 2 {
-                        //write!(f, "O ")?;
+                        write!(f, "O ")?;
                     } else {
-                        //write!(f, "_ ")?;
+                        write!(f, "_ ")?;
                     }
                     if (column + 1) % 3 == 0 {
                         write!(f, "| ")?;
@@ -219,7 +227,7 @@ impl fmt::Display for Board {
             //Ok(())
         } else {
             for i in 0..self.main_board.len() {
-                writeln!(f, "[{i}]: cells[{:18b}]-meta[{:14b}]", self.get_row_cells(i), self.main_board[i] >> 18)?
+                writeln!(f, "[{i}]: cells[{:18b}]-meta[{:14b}]", self.get_row_cells(i as u32), self.main_board[i] >> 18)?
             }
             Ok(())
         }
