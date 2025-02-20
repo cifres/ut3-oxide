@@ -21,13 +21,13 @@ pub mod flag {
 #[derive(Debug)]
 pub struct Board {
     pub main_board: [u32; 9],
-    prev_move: (usize, usize),
+    prev_move: (u8, u8),
 }
 
 impl Board {
 
     pub fn new() -> Self {
-        Board { main_board: [0; 9], prev_move: (flag::NEW_GAME as usize, flag::NEW_GAME as usize) }
+        Board { main_board: [0; 9], prev_move: (flag::NEW_GAME, flag::NEW_GAME) }
     }
 
     /* Cell Operations */
@@ -95,8 +95,11 @@ impl Board {
     /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply 
     /// minboard status checks
     pub fn do_move(&mut self, row: usize, column: usize, xoshape: u32) {
+        assert!(row < 9);
+        assert!(column < 9);
+
         self.set_cell(row, column, xoshape);
-        self.prev_move = (row, column);
+        self.prev_move = (row as u8, column as u8);
         let miniboard = Self::move_miniboard(row, column);
         let move_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
         self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE, move_count + 1); 
@@ -125,13 +128,15 @@ impl Board {
     /// 4) exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
     ///     empty, and it's board is contestable
     pub const fn is_valid_move(&self, row: usize, column: usize) -> bool {
+        assert!(row < 9);
+        assert!(column < 9);
 
         let cell = self.get_cell(row, column); 
         let miniboard = Self::move_miniboard(row, column);
         let miniboard_status = self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
 
         //if self.prev_move == (flag::NEW_GAME as usize, flag::NEW_GAME as usize) {
-        if self.prev_move.0 as u8 == flag::NEW_GAME && self.prev_move.1 as u8 == flag::NEW_GAME {
+        if self.prev_move.0 == flag::NEW_GAME && self.prev_move.1 == flag::NEW_GAME {
             //println!("valid {:?}", (row, column));
             return true;
         }
@@ -141,7 +146,7 @@ impl Board {
         }
         
         let (prev_row, prev_column) = self.prev_move;
-        let corresponding_miniboard = Self::move_corresponding_miniboard(prev_row, prev_column);
+        let corresponding_miniboard = Self::move_corresponding_miniboard(prev_row as usize, prev_column as usize);
         let corresponding_miniboard_status = self.get_meta_data(corresponding_miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
 
         if corresponding_miniboard_status != flag::STATUS_CONTESTABLE as u32 &&
@@ -162,7 +167,7 @@ impl Board {
     }
 
     pub fn reset(&mut self) {
-        self.prev_move = (flag::NEW_GAME as usize, flag::NEW_GAME as usize);
+        self.prev_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
     }
 
