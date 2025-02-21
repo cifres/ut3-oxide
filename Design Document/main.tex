@@ -1,0 +1,71 @@
+\documentclass[a4paper,12pt]{article}
+
+% Configuration
+
+\usepackage{amsmath,amsfonts,amssymb}	% AMS mathematical facilities, fonts and symbols
+\usepackage[a4paper, margin=1in]{geometry} %% margins
+\usepackage{natbib} %% References
+\usepackage{graphicx} %http://en.wikibooks.org/wiki/LaTeX/Importing_Graphics#Graphics_storage
+\usepackage[export]{adjustbox}
+\usepackage[absolute,overlay]{textpos}
+% \usepackage{tikz}
+% \usepackage{algorithm} % Code-Listings
+% \usepackage{algorithmic} % Code-Listings
+% \usepackage{lastpage}
+\usepackage[bookmarks=true, colorlinks=false]{hyperref} % Links - must be last package
+\usepackage{bitpattern} % For describing the a multi-bit structures
+
+\DeclareGraphicsExtensions{.pdf,.pngly braces for each path to add}
+
+\newcommand{\name}{Mohamed El Bakry}
+\newcommand{\mytitle}{Noughts and Crosses Design Document}
+
+
+\hypersetup{
+ pdfauthor={\name},
+ pdftitle={\mytitle},
+ colorlinks={true},
+ linkcolor={black}
+%  pdfsubject={\mytype},
+%  pdfkeywords={\mystream}
+}
+
+\includeonly{
+    text/introduction,
+    text/background,
+    text/goals,
+    text/technical-design,
+    text/questions,
+    text/analysis,
+}
+
+% Actual document
+\begin{document}
+
+\title{\mytitle}
+\author{\name}
+\date{Initiated on December 9, 2024 \break \today} 
+\maketitle
+
+% \newpage
+\tableofcontents
+\listoffigures
+\listoftables
+ 
+\pagestyle{plain}
+\pagenumbering{arabic}
+
+
+\include{text/introduction}
+\include{text/background}
+\include{text/goals}
+\include{text/technical-design}
+\include{text/questions}
+\include{text/analysis}
+
+% Use IEEEtran for numeric references
+% \bibliographystyle{IEEEtranSA})
+
+% \bibliography{refs}\end{document}
+
+\end{document}

@@ -1,0 +1,110 @@
+\section{Technical Design}
+To ensure that effort expended on this project is efficient,  it's important
+to align the project's objectives/goals, with its design and therefore the tools that shall fulfil that design.
+Thus, here we discuss each objective and its derivative design along with the technology that will
+achieve said goal (e.g. programming language, framework, library etc.). 
+Docker
+
+Table 1 showcases this.
+
+\begin{table}[h!]
+\begin{center}
+\begin{tabular}{||c | c | c||}
+    \hline
+    Goal & Design & Tool \\
+
+    \hline
+    Multiplayer & Authoritative Server \& Database & NoSQL \\
+    \hline
+    AI          & Backend Minimax \& MCTS & Golang/Rust Backend \\
+    \hline
+    Website features & Typescript \& Web frameworks & Dart/Flutter \\ 
+    \hline 
+\end{tabular}
+\end{center}
+\caption{Design overview.}
+\label{table:1}
+\end{table}
+
+Next, we break down each goal, the design decision and the respective tool. 
+
+\subsection {Multiplayer: Authoritative Server \& Database}
+To achieve multiplayer, there must be a way to synchronise multiple instances of games, and player actions with each other.
+Furthermore, an uncomprimisable tenet of multiplayer for player versus player games is competitive integerity. Thus,
+a server model which ensures said integrity is paramount to the project's success.
+
+Therefore, an authoritative server model in which a central trusted node cross-checks and resolves game state differences, unintentionally or intentionally through cheating,
+is best to fulfil the promise and need for competitive integrity. 
+
+\subsection {AI: Minimax \& MCTS Server Backend}
+This section briefly explores the API's shape. 
+
+\subsection{Architecture}
+Here we explore how the \verb|ut3-oxide| Rust implementation will operate.
+
+\subsubsection{Binary Operations}
+For maximal efficiency's sake, we opt for representing each row as single 
+\verb|u32| integer, with 2 bits per cell ($9 \times 2 = 18$ — leaving 14 bits remaining for metadata)
+\paragraph{Getting Bits}
+\begin{center}
+    \bitpattern[numberBitsBelow,numberFieldsTwice,startBit=31]{meta data}[14]{cells}[18]/
+\end{center}
+
+Formula
+\begin{center}
+    \begin{math}
+        n \& ((2^x - 1) \ll dx) \gg dx
+    \end{math}
+\end{center}
+
+Alternatively
+\begin{center}
+\begin{math}
+    n \operatorname{\&} (((1 \ll x) - 1)) \ll dx \gg dx
+\end{math}
+\end{center}
+
+NB: Naturally, if you don't need to offset the value, then $dx$ is unrequired and is simplified to:
+
+\begin{center}
+    \begin{math}
+        n \operatorname{\&} (1 \ll x) - 1
+    \end{math}
+\end{center}
+
+\paragraph{Clearing Bits}
+Here's how bits are cleared
+\begin{center}
+    $n = 1101 1100$
+    
+
+    $mask = 0b11 \ll dx$
+    
+    
+    $n = n \operatorname{\&} \operatorname{\sim} mask$
+\end{center}
+
+\begin{center}
+    \begin{math}
+        n = n \land \neg(0b11 \ll dx)
+    \end{math}
+\end{center}
+
+    n \&= $\sim (0b11 \ll dx)$
+\paragraph{Setting Bits}
+\subsection{Components}
+\subsection{Algorithms}
+As previously mentioned, there will be two AI Algorithms for the Player vs Computer mode.
+Furthermore, it's the Minimax Algorithm that ought ot be used for the easy difficulty. However,
+the relative difficulty depends on minimax's evaluation function, and the duration allowed for 
+MCTS to explore the game tree. Therefore, it may be more efficient to develop the MCTS AI more thoroughly and create 
+a perceived difficult through differing allowed tree-search time durations. 
+
+\subsubsection{MCTS}
+
+\subsection{Data Models}
+\subsection{APIs and Interfaces}
+
+\subsection{Tech Stack}
+Frontend: Flutter (Dart) \newline
+Backend: Rust SqlX?
