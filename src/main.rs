@@ -39,5 +39,7 @@ fn main() -> std::fmt::Result {
     //    //println!("{:b}", board._get_row_metadata(4));
     //}
     //println!("metadata:{:14b}", board.get_row_metadata(0));
+
+    board.reset();
     Ok(())
 }

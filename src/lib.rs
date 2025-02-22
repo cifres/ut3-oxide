@@ -81,4 +81,27 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn get_cells() {
+        let mut board = Board::new();
+
+        board.set_cell(3, 3, 1);
+        board.set_cell(3, 4, 2);
+        board.set_cell(3, 5, 1);
+ 
+        board.set_cell(4, 3, 1);
+        board.set_cell(4, 4, 1);
+        board.set_cell(4, 5, 1);
+
+        board.set_cell(5, 3, 2);
+        board.set_cell(5, 4, 2);
+        board.set_cell(5, 5, 2);
+
+        let cells = board.get_cells(4);
+
+        println!("{cells:032b} = {cells}");
+
+        assert_eq!(cells, 0b101010_010101_011001);
+    }
 }

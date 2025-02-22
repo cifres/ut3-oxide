@@ -15,8 +15,25 @@ pub mod flag {
     pub const MINIBOARD_MOVE_COUNT: u32     = 22;
     pub const MOVE_COUNT_BIT_SIZE:  u32     = 0b1111;
 
-    pub const NEW_GAME:             u8      = 255;
+    pub const NEW_GAME:             u8      = u8::MAX;
 }
+
+//const ROW_LINE: [[u8; 2]; 3] = [[0, 0], [0, 1], [0, 2]];
+//const COL_LINE: 
+
+const ROW_LINE: [(u8, u8); 3] = [(0, 0), (0, 1), (0, 2)];
+const COL_LINE: [(u8, u8); 3] = [(0, 0), (1, 0), (2, 0)];
+const DIAGONAL_LINE: [(u8, u8); 6] = [
+    (0, 0), (1, 1), (2, 2),
+    (0, 2), (1, 1), (2, 0)
+];
+
+const WINNING_LINES: [[(u8, u8); 3]; 4] = [
+    [ROW_LINE[0], ROW_LINE[1], ROW_LINE[2]],
+    [COL_LINE[0], COL_LINE[1], COL_LINE[2]],
+    [DIAGONAL_LINE[0], DIAGONAL_LINE[1], DIAGONAL_LINE[2]],
+    [DIAGONAL_LINE[3], DIAGONAL_LINE[4], DIAGONAL_LINE[5]],
+]; 
 
 #[derive(Debug)]
 pub struct Board {
@@ -171,10 +188,37 @@ impl Board {
         self.main_board = [0; 9];
     }
 
+    /// Checks and calculates the miniboard's status based on any winning lines
+    pub fn _check_miniboard_status(&self, miniboard: usize) {
+        // for each miniboard, check if each of the winning lines are found for X or O
+        // for each miniboard, get its cells, iterate over them with the winning lines
+        let _cells = self.get_cells(miniboard);
+        
+        WINNING_LINES.iter().for_each(|t| println!("{t:?}"));
+    }
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
-    pub const fn get_game_status() -> u8 {
+    pub const fn _get_game_status() -> u8 {
         todo!()
+    }
+
+    /// Returns a miniboard's cells in;
+    pub fn get_cells(&self, miniboard: usize) -> u32  {
+        let mut cells = 0u32;
+        let (row, column) = (miniboard / 3 * 3, miniboard % 3 * 3);
+        
+        for y in 0..3 {
+            for x in 0..3 {
+                // * 2 in the end to account for cell bit length of 2;
+                let mask_offset = (y * 3 + x) * 2;
+                let cell = self.get_cell(row + y, column + x);
+                let mask = cell << mask_offset;
+                cells |= mask; 
+                // add cell to cells at pos y, x with general, internal set u32 val  
+            }
+        }
+
+        cells
     }
 }
 
@@ -184,6 +228,7 @@ impl Default for Board {
     }
 }
 
+
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // print the board with Xs and Os
@@ -191,13 +236,14 @@ impl fmt::Display for Board {
             for row in 0..9 {
                 for column in 0..9 { 
                     let cell = self.get_cell(row, column);
-                    //write!(f, "{row},{column} ")?;
+                    write!(f, "{row},{column} ")?;
+                    //write!(f, "{:01} ", column + (row * 3) * 3)?;
                     if cell == 1 {
-                        write!(f, "X ")?;
+                        //write!(f, "X ")?;
                     } else if cell == 2 {
-                        write!(f, "O ")?;
+                        //write!(f, "O ")?;
                     } else {
-                        write!(f, "_ ")?;
+                        //write!(f, "_ ")?;
                     }
                     if (column + 1) % 3 == 0 {
                         write!(f, "| ")?;
