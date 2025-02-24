@@ -27,6 +27,16 @@ fn main() -> std::fmt::Result {
 
     //println!("{}", board);
     println!("{:#}", board);
+    board.reset();
+    board.do_move(3, 3, 2);
+    board.do_move(3, 4, 2);
+    board.do_move(3, 5, 2);
+
+    board.do_move(3, 3, 2);
+    board.do_move(4, 4, 2);
+    board.do_move(5, 5, 2);
+
+    board._check_miniboard_status(4);
 
     //for i in 0..9 {
     //
