@@ -3,13 +3,38 @@ pub mod board;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::board::Board;
+    use crate::board::{flag, Board};
 
     #[test]
+    fn set_meta_data() {
+        let mut board = Board::new();
+
+        board.do_move(3, 3, 1);
+        board.do_move(3, 4, 1);
+        board.do_move(3, 5, 1);
+
+        board.do_move(4, 3, 1);
+        board.do_move(4, 4, 1);
+        board.do_move(4, 5, 1);
+
+        board.do_move(5, 3, 2);
+        board.do_move(5, 4, 2);
+        board.do_move(5, 5, 2);
+
+        let miniboard = Board::move_miniboard(3, 3);
+        let movecount = board.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
+        let left_miniboard_movecount = board.get_meta_data(miniboard - 1, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
+        let right_miniboard_movecount = board.get_meta_data(miniboard + 1, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
+
+        assert_eq!(movecount, 9, "move count was {movecount} for minboard {miniboard} when it should be 9");
+        assert_eq!(left_miniboard_movecount, 0);
+        assert_eq!(right_miniboard_movecount, 0);
+    }
     /// validate moves by ensuring that invalidity if:
     /// 1) cell is occupied
     /// 2) miniboard is 'uncontested' i.e. won by X or O, or drawn
     /// 3) miniboard coords don't correspond to previous move
+    #[test]
     fn is_valid_move() {
         let mut b = Board::default();
 
@@ -95,14 +120,34 @@ mod tests {
         board.set_cell(4, 4, 1);
         board.set_cell(4, 5, 1);
 
+        board._check_miniboard_status(4);
+
         board.set_cell(5, 3, 2);
         board.set_cell(5, 4, 2);
         board.set_cell(5, 5, 2);
 
-        let cells = board.get_cells(4);
+        let cells = board.get_miniboard_cells(4);
 
         println!("{cells:032b} = {cells}");
 
         assert_eq!(cells, 0b101010_010101_011001);
+    }
+
+    #[test]
+    fn check_miniboard_status() {
+        let mut board = Board::new();
+
+        board.do_move(3, 3, 2);
+        board.do_move(3, 4, 2);
+        board.do_move(3, 5, 2);
+
+        board.do_move(3, 3, 2);
+        board.do_move(4, 4, 2);
+        board.do_move(5, 5, 2);
+
+        let miniboard = Board::move_miniboard(3, 3);
+        let win = board._check_miniboard_status(miniboard);
+
+        assert!(win);
     }
 }
