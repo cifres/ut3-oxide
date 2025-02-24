@@ -48,15 +48,16 @@ impl Board {
     }
 
     /* Cell Operations */
-    pub const fn get_cell(&self, row: usize, column: usize) -> u32 {
+    pub const fn get_cell(&self, row: u8, column: u8) -> u32 {
         let offset = column * 2;
         let mask = 0b11 << offset;
         
-        (self.main_board[row] & mask) >> offset
+        (self.main_board[row as usize] & mask) >> offset
     }
 
-    pub const fn set_cell(&mut self, row: usize, column: usize, xoshape: u32) {
+    pub const fn set_cell(&mut self, row: u8, column: u8, xoshape: u32) {
         // clear bits
+        let row = row as usize;
         let offset = column * 2;
         let mask = 0b11 << offset;
         self.main_board[row] &= !mask; 
@@ -77,8 +78,9 @@ impl Board {
     /* Miniboard Meta Data */
 
     //#[inline(always)]
-    pub const fn set_meta_data(&mut self, miniboard: usize, flag_pos: u32, flag_size: u32, value: u32) {
+    pub const fn set_meta_data(&mut self, miniboard: u8, flag_pos: u32, flag_size: u32, value: u32) {
         // clear the occupying bits
+        let miniboard = miniboard as usize;
         let mask = flag_size << flag_pos;
         self.main_board[miniboard] &= !mask;
 
@@ -87,9 +89,11 @@ impl Board {
         self.main_board[miniboard] |= mask;
     }
 
-    pub const fn get_meta_data(&self, miniboard: usize, flag_pos: u32, flag_size: u32) -> u32 {
+    pub const fn get_meta_data(&self, miniboard: u8, flag_pos: u32, flag_size: u32) -> u32 {
+        assert!(miniboard < 9);
+
         let mask = flag_size << flag_pos;
-        (self.main_board[miniboard] & mask) >> flag_pos
+        (self.main_board[miniboard as usize] & mask) >> flag_pos
     }
 
     // Get a miniboard's metadata from its corresponding row 
@@ -111,30 +115,32 @@ impl Board {
 
     /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply 
     /// minboard status checks
-    pub fn do_move(&mut self, row: usize, column: usize, xoshape: u32) {
+    pub fn do_move(&mut self, row: u8, column: u8, xoshape: u32) {
         assert!(row < 9);
         assert!(column < 9);
 
         self.set_cell(row, column, xoshape);
-        self.prev_move = (row as u8, column as u8);
+        self.prev_move = (row, column);
         let miniboard = Self::move_miniboard(row, column);
         let move_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
         self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE, move_count + 1); 
     }
 
     /// Returns the miniboard that move is in
-    pub const fn move_miniboard(row: usize, column: usize) -> usize {
+    pub const fn move_miniboard(row: u8, column: u8) -> u8 {
 
+        assert!(row < 9);
+        assert!(column < 9);
         //let mb = (column / 3) + (row / 3) * 3;
         //println!("{row}, {column} -> {mb}");
 
-        (column / 3) + (row / 3) * 3  
+        column / 3 + (row / 3) * 3  
     }
 
     //TODO: find better name than "corresponding"
     
     /// Returns the miniboard number that the next move should be played in
-    pub const fn move_corresponding_miniboard(row: usize, column: usize) -> usize {
+    pub const fn move_corresponding_miniboard(row: u8, column: u8) -> u8 {
         (column % 3) + (row % 3) * 3
     }
 
@@ -144,7 +150,7 @@ impl Board {
     /// 3) miniboard coords don't correspond to previous move
     /// 4) exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
     ///     empty, and it's board is contestable
-    pub const fn is_valid_move(&self, row: usize, column: usize) -> bool {
+    pub const fn is_valid_move(&self, row: u8, column: u8) -> bool {
         assert!(row < 9);
         assert!(column < 9);
 
@@ -163,7 +169,7 @@ impl Board {
         }
         
         let (prev_row, prev_column) = self.prev_move;
-        let corresponding_miniboard = Self::move_corresponding_miniboard(prev_row as usize, prev_column as usize);
+        let corresponding_miniboard = Self::move_corresponding_miniboard(prev_row, prev_column);
         let corresponding_miniboard_status = self.get_meta_data(corresponding_miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
 
         if corresponding_miniboard_status != flag::STATUS_CONTESTABLE as u32 &&
@@ -189,9 +195,12 @@ impl Board {
     }
 
     /// Checks and calculates the miniboard's status based on any winning lines
-    pub fn _check_miniboard_status(&self, miniboard: usize) {
+    pub fn _check_miniboard_status(&self, miniboard: u8) {
         // for each miniboard, check if each of the winning lines are found for X or O
         // for each miniboard, get its cells, iterate over them with the winning lines
+
+        // match row pattern to 101010 (2, 2, 2) -> 42 
+        // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
         let _cells = self.get_cells(miniboard);
         
         WINNING_LINES.iter().for_each(|t| println!("{t:?}"));
@@ -203,18 +212,21 @@ impl Board {
     }
 
     /// Returns a miniboard's cells in;
-    pub fn get_cells(&self, miniboard: usize) -> u32  {
-        let mut cells = 0u32;
-        let (row, column) = (miniboard / 3 * 3, miniboard % 3 * 3);
-        
-        for y in 0..3 {
-            for x in 0..3 {
-                // * 2 in the end to account for cell bit length of 2;
-                let mask_offset = (y * 3 + x) * 2;
-                let cell = self.get_cell(row + y, column + x);
+    pub fn get_cells(&self, miniboard: u8) -> u32  {
+        assert!(miniboard < 9);
+
+        let mut cells: u32 = 0;
+        let (starting_row, starting_column) = (miniboard / 3 * 3, miniboard % 3 * 3);
+        debug_assert!(starting_row % 3 == 0 && starting_row <= 6);
+        debug_assert!(starting_column % 3 == 0 && starting_column <= 6);
+
+        for row in 0..3 {
+            for column in 0..3 {
+                // * 2 to account for cell bit length of 2;
+                let mask_offset = (row * 3 + column) * 2;
+                let cell = self.get_cell(starting_row + row, starting_column + column);
                 let mask = cell << mask_offset;
                 cells |= mask; 
-                // add cell to cells at pos y, x with general, internal set u32 val  
             }
         }
 

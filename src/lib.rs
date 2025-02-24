@@ -86,6 +86,7 @@ mod tests {
     fn get_cells() {
         let mut board = Board::new();
 
+        // fill miniboard 4 by filling rows and columns 3, 4, and 5.
         board.set_cell(3, 3, 1);
         board.set_cell(3, 4, 2);
         board.set_cell(3, 5, 1);
