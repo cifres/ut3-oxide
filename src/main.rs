@@ -1,6 +1,7 @@
 mod board;
 
-use board::{flag::{MINIBOARD_MOVE_COUNT, MINIBOARD_STATUS}, Board};
+//use board::{flag::{MINIBOARD_MOVE_COUNT, MINIBOARD_STATUS}, Board};
+use board::Board;
 
 fn main() -> std::fmt::Result {
     let mut board = Board::new();
@@ -36,7 +37,7 @@ fn main() -> std::fmt::Result {
     board.do_move(4, 4, 2);
     board.do_move(5, 5, 2);
 
-    board._check_miniboard_status(4);
+    board.check_miniboard_status(4);
 
     //for i in 0..9 {
     //
