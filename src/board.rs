@@ -1,4 +1,4 @@
-use std::fmt::{self, write};
+use std::fmt::{self};
 
 /// u32 board row format:
 /// most significant bit <- -> least significant bit
@@ -21,40 +21,41 @@ pub mod flag {
     pub const O_SHAPE:              u8  = 2;
 }
 
-const ROW_LINE: [(u8, u8); 9] = {
-    let mut y = 0u8;
-    let mut row_line = [(0, 0); 9];
-    while y < 3 {
-        let mut x = 0u8;
-        while x < 3 {
-            let i = (x + y * 3) as usize;
-            row_line[i] = (y, x);
-            x += 1;
+const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
+
+    const ROW_LINE: [(u8, u8); 9] = const {
+        let mut y = 0u8;
+        let mut row_line = [(0, 0); 9];
+        while y < 3 {
+            let mut x = 0u8;
+            while x < 3 {
+                let i = (x + y * 3) as usize;
+                row_line[i] = (y, x);
+                x += 1;
+            }
+            y += 1;    
         }
-        y += 1;    
-    }
 
-    row_line
-};
+        row_line
+    };
 
-const COL_LINE: [(u8, u8); 9] = {
-    let mut y = 0;
-    let mut col_line = [(0, 0); 9];
-    while y < 9 {
-        let (row, col) = ROW_LINE[y];        
-        col_line[y] = (col, row);
-        y += 1;
-    }
-    
-    col_line
-};
+    const COL_LINE: [(u8, u8); 9] = const {
+        let mut y = 0;
+        let mut col_line = [(0, 0); 9];
+        while y < 9 {
+            let (row, col) = ROW_LINE[y];        
+            col_line[y] = (col, row);
+            y += 1;
+        }
+        
+        col_line
+    };
 
-const DIAGONAL_LINE: [(u8, u8); 6] = [
-    (0, 0), (1, 1), (2, 2),
-    (0, 2), (1, 1), (2, 0)
-];
+    const DIAGONAL_LINE: [(u8, u8); 6] = [
+        (0, 0), (1, 1), (2, 2),
+        (0, 2), (1, 1), (2, 0)
+    ];
 
-const WINNING_LINES: [[(u8, u8); 3]; 8] = {
     let mut winning_lines = [[(0, 0); 3]; 8];
     let mut y = 0;
     while y < 3 {
@@ -68,7 +69,9 @@ const WINNING_LINES: [[(u8, u8); 3]; 8] = {
     winning_lines[7] = [DIAGONAL_LINE[3], DIAGONAL_LINE[4], DIAGONAL_LINE[5]];
 
     winning_lines
-};
+}
+
+const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines(); 
 
 #[derive(Debug)]
 pub struct Board {
@@ -124,6 +127,7 @@ impl Board {
         self.main_board[miniboard] |= mask;
     }
 
+    // TODO: create get_status_of(miniboard) method for simplicity
     pub const fn get_meta_data(&self, miniboard: u8, flag_pos: u32, flag_size: u32) -> u32 {
         assert!(miniboard < 9);
 
@@ -157,8 +161,19 @@ impl Board {
         self.set_cell(row, column, xoshape);
         self.prev_move = (row, column);
         let miniboard = Self::move_miniboard(row, column);
-        let move_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
-        self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE, move_count + 1); 
+        let move_count = self.get_meta_data(
+            miniboard,
+            flag::MINIBOARD_MOVE_COUNT,
+            flag::MOVE_COUNT_BIT_SIZE
+        );
+        self.set_meta_data(
+            miniboard,
+            flag::MINIBOARD_MOVE_COUNT,
+            flag::MOVE_COUNT_BIT_SIZE,
+            move_count + 1
+        ); 
+
+        assert!(move_count < 10);
     }
 
     /// Returns the miniboard that move is in
@@ -204,7 +219,12 @@ impl Board {
         
         let (prev_row, prev_column) = self.prev_move;
         let corresponding_miniboard = Self::move_corresponding_miniboard(prev_row, prev_column);
-        let corresponding_miniboard_status = self.get_meta_data(corresponding_miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
+
+        let corresponding_miniboard_status = self.get_meta_data(
+            corresponding_miniboard,
+            flag::MINIBOARD_STATUS,
+            flag::STATUS_BIT_SIZE
+        );
 
         if corresponding_miniboard_status != flag::STATUS_CONTESTABLE as u32 &&
         miniboard_status == flag::STATUS_CONTESTABLE as u32 { 
@@ -228,36 +248,58 @@ impl Board {
         self.main_board = [0; 9];
     }
 
+    // TODO: make dynamic with X or O not just O as `2`
     /// Checks and calculates the miniboard's status based on any winning lines
-    pub fn _check_miniboard_status(&self, miniboard: u8) -> bool {
-        // for each miniboard, check if each of the winning lines are found for X or O
-        // for each miniboard, get its cells, iterate over them with the winning lines
-
+    /// Short-circuits and stops as soon as any winning line is found
+    /// Use with `get_status`
+    /// Returns a `bool` with `true` indicating the miniboard's status isn't `flag::STATUS_CONTESTABLE`
+    /// i.e, `flag::STATUS_X_WIN`, `flag::STATUS_O_WIN`, or `flag::STATUS_DRAW` 
+    pub fn check_miniboard_status(&mut self, miniboard: u8) -> bool {
         // match row pattern to 101010 (2, 2, 2) -> 42 
         // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
-        //const x_row_win: u8 = 0b010101; 
-        
+
+        // movecount == 9 drawn
+        // nothing changed:  contestable
         // Compare bitshifted miniboard cells to the same bitshifted wonline pattern
-        let _cells = self.get_miniboard_cells(miniboard);
-        let win = WINNING_LINES.iter().map(|wl| {
-            println!("{wl:?}");
+        let cells = self.get_miniboard_cells(miniboard);
+        for line in WINNING_LINES {
+            //println!("{line:?}");
             let mut mask = 0u32;
-            let mut wonline = 0u32;
-            for &(row, column) in wl.iter() {
+            let mut x_wonline = 0u32;
+            let mut o_wonline = 0u32;
+
+            // Create a mask to later get the cells for that winning line
+            // Mask out those cells but as if X or O occupied those cells 
+            for (row, column) in line {
                 let offset = (column + row * 3) * 2;
                 mask |= 0b11 << offset;
-                wonline |= 0b10 << offset;
-                println!("{offset} {mask:b} {mask}");
+                x_wonline |= (flag::X_SHAPE as u32) << offset;
+                o_wonline |= (flag::O_SHAPE as u32) << offset;
             }
-            // shift back the bits 
-            let extracted_bits = _cells & mask;
-            println!("{wonline:b} == {extracted_bits:b} <- {_cells:b}");
-            extracted_bits == wonline
-        }).collect::<Vec<_>>();
-        println!("{:?}", win);
 
-        win.iter().any(|&v| v)
+            let masked_line = cells & mask;
+            let xwin = masked_line == x_wonline;
+            let owin = masked_line == o_wonline;
+            let piecewin = ((xwin as u8) * flag::X_SHAPE) | ((owin as u8) * flag::O_SHAPE); 
+            assert_ne!(piecewin, 3);    // Only X or O can win a miniboard
+            //println!("X: {xwin} O: {owin} -> win: {piecewin}");
+
+            self.set_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE, piecewin as u32);
+            if piecewin > 0 {
+                return true;
+            }
+        }
+
+        let move_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
+        if move_count == 9 {
+            self.set_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE, flag::STATUS_DRAW as u32);
+            return true;
+        }
+            
+        false
     }
+
+    // TODO: only check miniboards with move_count > 2 
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
     pub const fn _get_game_status() -> u8 {
@@ -270,6 +312,7 @@ impl Board {
 
         let mut cells: u32 = 0;
         let (starting_row, starting_column) = (miniboard / 3 * 3, miniboard % 3 * 3);
+        // Options are 0, 3, or 6 for starting rows/columns of a miniboard
         debug_assert!(starting_row % 3 == 0 && starting_row <= 6);
         debug_assert!(starting_column % 3 == 0 && starting_column <= 6);
 
