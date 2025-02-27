@@ -157,6 +157,7 @@ impl Board {
 
     /* Row-wise operations  */
 
+    // TODO: u32 -> u8 arg
     /// Create a mask where there are only 1s over the `18` bits for the u32 row
     /// with the remaining `14` being 0s to zero-out the row metadata.
     const fn get_row_cells(&self, row: u32) -> u32 {
@@ -195,6 +196,7 @@ impl Board {
     }
 
     /// Returns the miniboard that move is in
+    #[inline(always)]
     pub const fn move_miniboard(row: u8, column: u8) -> u8 {
 
         assert!(row < 9);
@@ -208,6 +210,7 @@ impl Board {
     //TODO: find better name than "corresponding"
     
     /// Returns the miniboard number that the next move should be played in
+    #[inline(always)]
     pub const fn move_corresponding_miniboard(row: u8, column: u8) -> u8 {
         (column % 3) + (row % 3) * 3
     }
@@ -318,10 +321,60 @@ impl Board {
     }
 
     // TODO: only check miniboards with move_count > 2 
+    // Compare against last player's move only for masking 
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
-    pub const fn _get_game_status() -> u8 {
-        todo!()
+    pub fn _get_game_status(&mut self) -> u8 {
+        // Get miniboard statuses in a winning line of the prev_move's miniboard
+        let (row, column) = self.prev_move;
+        let prev_player = self.get_cell(row, column);
+        let miniboard = Self::move_miniboard(row, column);
+        let coords = (miniboard / 3, miniboard % 3);
+        let status_changed = self.check_miniboard_status(miniboard);
+        let status = self.get_status_of(miniboard);
+
+        if !status_changed && status != (flag::STATUS_DRAW as u32) {
+            return flag::STATUS_CONTESTABLE;
+        }
+
+        // in a winning line...
+        // get winning lines intersecting with the last move's miniboard
+        let potential_lines = WINNING_LINES
+            .iter()
+            .filter(|line| line.contains(&coords))
+            .collect::<Vec<_>>();
+
+        println!("{potential_lines:?}");
+
+        for line in potential_lines {
+            let mut statusbits = 0u32;
+            let mut xoline = 0u32;
+            for &(row, column) in line {
+                let miniboard = column + row * 3;
+                let _ = self.check_miniboard_status(miniboard);
+                let status = self.get_status_of(miniboard);
+                println!("{status}");
+                
+                let offset = (column + row * 3) * 2;
+                statusbits |= status << offset;
+                xoline |= prev_player << offset;
+            }
+            let won = statusbits == xoline;
+            println!("w/l {won} = {statusbits} - {statusbits:032b} - {xoline}");
+            if won {
+                return prev_player as u8;
+            }
+        }
+
+        // draw checking
+        // all miniboards drawn -- no valid moves
+        // miniboards.reduce(move_count) == 81
+        for i in 0..self.main_board.len() as u32 {
+            let row = self.get_row_cells(i);
+            const n: u32 = 0b101001_100010_010101;
+        }
+    
+        flag::STATUS_CONTESTABLE
     }
 
     /// Returns a miniboard's cells in;
