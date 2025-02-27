@@ -125,7 +125,7 @@ mod tests {
     fn check_miniboard_status() {
         let mut board = Board::new();
 
-        // row-wise horizontal line
+        /* row-wise horizontal line: 0 */
         board.do_move(0, 0, 2);
         board.do_move(0, 1, 2);
         board.do_move(0, 2, 2);
@@ -137,37 +137,82 @@ mod tests {
         assert_eq!(winner, flag::STATUS_O_WIN as u32);
         board.reset();
 
-        // column wise, vertical line
-        board.do_move(0, 1, 2);
-        board.do_move(1, 1, 2);
-        board.do_move(2, 1, 2);
+        // row: 1  
+        board.do_move(1, 3, 1);
+        board.do_move(1, 4, 1);
+        board.do_move(1, 5, 1);
 
+        let miniboard = Board::move_miniboard(1, 3);
+        let win = board.check_miniboard_status(miniboard);
+        let winner = board.get_status_of(miniboard);
+        assert!(win);
+        assert_eq!(winner, flag::STATUS_X_WIN as u32);
+        board.reset();
+
+        // row: 2  
+        board.do_move(2, 6, 1);
+        board.do_move(2, 7, 1);
+        board.do_move(2, 8, 1);
+
+        let miniboard = Board::move_miniboard(2, 6);
+        let win = board.check_miniboard_status(miniboard);
+        let winner = board.get_status_of(miniboard);
+        assert!(win);
+        assert_eq!(winner, flag::STATUS_X_WIN as u32);
+        board.reset();
+
+        /* column wise, vertical line: 0 */
+        board.do_move(3, 0, 2);
+        board.do_move(4, 0, 2);
+        board.do_move(5, 0, 2);
+
+        let miniboard = Board::move_miniboard(3, 0);
         let win = board.check_miniboard_status(miniboard);
         assert!(win);
         board.reset();
-
-        board.do_move(3, 3, 2);
-        board.do_move(3, 4, 2);
-        board.do_move(3, 5, 2);
-
-        let miniboard = Board::move_miniboard(3, 3);
-        let win = board.check_miniboard_status(miniboard);
-        assert!(win);
-        board.reset();
-
-        board.do_move(0, 1, 1);
-        board.do_move(1, 1, 1);
-        board.do_move(2, 1, 1);
-
-        let _ = board.check_miniboard_status(0);
         
-        // diagonal line
-        // A winning line found with 9 moves is still a win, not a draw
+        // column: 1
+        board.do_move(3, 4, 1);
+        board.do_move(4, 4, 1);
+        board.do_move(5, 4, 1);
+
+        let miniboard = Board::move_miniboard(3, 4);
+        let win = board.check_miniboard_status(miniboard);
+        let winner = board.get_status_of(miniboard);
+        assert!(win);
+        assert_eq!(winner, flag::STATUS_X_WIN as u32);
         board.reset();
+
+        // column: 2
+        board.do_move(3, 8, 2);
+        board.do_move(4, 8, 2);
+        board.do_move(5, 8, 2);
+
+        let miniboard = Board::move_miniboard(3, 8);
+        let win = board.check_miniboard_status(miniboard);
+        let winner = board.get_status_of(miniboard);
+        assert!(win);
+        assert_eq!(winner, flag::STATUS_O_WIN as u32);
+        board.reset();
+
+        /* diagonal line */
+        // diagonal: 1
+        board.do_move(6, 2, 1);
+        board.do_move(7, 1, 1);
+        board.do_move(8, 0, 1);
+
+        let miniboard = Board::move_miniboard(6, 2);
+        let win = board.check_miniboard_status(miniboard);
+        let winner = board.get_status_of(miniboard);
+        assert!(win);
+        assert_eq!(winner, flag::STATUS_X_WIN as u32);
+        board.reset();
+    
+        // diagonal: 0
+        // A winning line found with 9 moves is still a win, not a draw
         board.do_move(6, 6, 1);
         board.do_move(6, 7, 2);
         board.do_move(6, 8, 1);
-        //println!("{:?}", board.get_status_of(8));
 
         board.do_move(7, 6, 2);
         board.do_move(7, 7, 1);
@@ -177,23 +222,23 @@ mod tests {
         board.do_move(8, 7, 1);
         board.do_move(8, 8, 2);
 
-        let status_changed = board.check_miniboard_status(8);
-        let status = board.get_status_of(8);
-        println!("movecount: {:?}", board.get_status_of(8));
+        let miniboard = Board::move_miniboard(6, 6);
+        let status_changed = board.check_miniboard_status(miniboard);
+        let status = board.get_status_of(miniboard);
+        println!("movecount: {:?}", board.get_status_of(miniboard));
         assert!(status_changed);
         assert_eq!(status, flag::STATUS_DRAW as u32);
 
-        // 9 moves is a draw
-        // change the last 3 rows to make x win and have 9 moves made 
-        board.set_move_count_of(8, 6);
+        // 9 moves is a draw but ensure priority to win checking
+        // by changing last 3 rows to make x win and have 9 moves made 
+        board.set_move_count_of(miniboard, 6);
         board.do_move(8, 6, 1);
         board.do_move(8, 7, 2);
         board.do_move(8, 8, 1);
         
-        let move_count = board.get_move_count_of(8);
-        let status_changed = board.check_miniboard_status(8);
-        let status = board.get_status_of(8);
-        //println!("movecount: {:?}", board.get_meta_data(8, flag::MINIBOARD_MOVE_COUNT, MOVE_COUNT_BIT_SIZE));
+        let move_count = board.get_move_count_of(miniboard);
+        let status_changed = board.check_miniboard_status(miniboard);
+        let status = board.get_status_of(miniboard);
         assert_eq!(move_count, 9);
         assert!(status_changed);
         assert_eq!(status, flag::STATUS_X_WIN as u32);
