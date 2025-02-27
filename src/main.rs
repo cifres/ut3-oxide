@@ -29,9 +29,20 @@ fn main() -> std::fmt::Result {
     //println!("{}", board);
     println!("{:#}", board);
     board.reset();
-    board.do_move(3, 3, 2);
-    board.do_move(3, 4, 2);
-    board.do_move(3, 5, 2);
+    board.do_move(3, 0, 2);
+    board.do_move(3, 1, 2);
+    board.do_move(3, 2, 2);
+
+    board.do_move(4, 3, 2);
+    board.do_move(4, 4, 2);
+    board.do_move(4, 5, 2);
+
+    board.do_move(5, 6, 2);
+    board.do_move(5, 7, 2);
+    board.do_move(5, 8, 2);
+
+    let n = board._get_game_status();
+    println!("{n}");
 
     board.do_move(3, 3, 2);
     board.do_move(4, 4, 2);
