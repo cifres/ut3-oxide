@@ -127,7 +127,6 @@ impl Board {
         self.main_board[miniboard] |= mask;
     }
 
-    // TODO: create get_status_of(miniboard) method for simplicity
     pub const fn get_meta_data(&self, miniboard: u8, flag_pos: u32, flag_size: u32) -> u32 {
         assert!(miniboard < 9);
 
@@ -135,8 +134,27 @@ impl Board {
         (self.main_board[miniboard as usize] & mask) >> flag_pos
     }
 
-    // Get a miniboard's metadata from its corresponding row 
-    // where row n holds miniboard n's metadata
+    #[inline(always)]
+    pub fn get_status_of(&self, miniboard: u8) -> u32 {
+        self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE) 
+    }
+
+    #[inline(always)]
+    pub fn set_status_of(&mut self, miniboard: u8, value: u32) {
+        assert!(value <= flag::STATUS_DRAW as u32);
+        self.set_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE, value);
+    }
+    
+    #[inline(always)]
+    pub fn get_move_count_of(&self, miniboard: u8) -> u8 {
+        self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE) as u8
+    }
+
+    #[inline(always)]
+    pub fn set_move_count_of(&mut self, miniboard: u8, value: u32) {
+        self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE, value); 
+    }
+
     /* Row-wise operations  */
 
     /// Create a mask where there are only 1s over the `18` bits for the u32 row
@@ -200,7 +218,7 @@ impl Board {
     /// 3) miniboard coords don't correspond to previous move
     /// 4) exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
     ///     empty, and it's board is contestable
-    pub const fn is_valid_move(&self, row: u8, column: u8) -> bool {
+    pub fn is_valid_move(&self, row: u8, column: u8) -> bool {
         assert!(row < 9);
         assert!(column < 9);
 
