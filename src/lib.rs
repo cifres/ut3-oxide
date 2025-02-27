@@ -22,9 +22,9 @@ mod tests {
         board.do_move(5, 5, 2);
 
         let miniboard = Board::move_miniboard(3, 3);
-        let movecount = board.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
-        let left_miniboard_movecount = board.get_meta_data(miniboard - 1, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
-        let right_miniboard_movecount = board.get_meta_data(miniboard + 1, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
+        let movecount = board.get_move_count_of(miniboard);
+        let left_miniboard_movecount = board.get_move_count_of(miniboard - 1);
+        let right_miniboard_movecount = board.get_move_count_of(miniboard + 1);
 
         assert_eq!(movecount, 9, "move count was {movecount} for minboard {miniboard} when it should be 9");
         assert_eq!(left_miniboard_movecount, 0);
@@ -35,26 +35,21 @@ mod tests {
     /// 2) miniboard is 'uncontested' i.e. won by X or O, or drawn
     /// 3) miniboard coords don't correspond to previous move
     #[test]
-    fn is_valid_move() {
+    fn is_valid_move_test() {
         let mut b = Board::default();
 
         // 1) cell is occupied
         b.do_move(5, 5, 1);
         assert!(!b.is_valid_move(5, 5));
 
-        // 2) miniboard is uncontestable
+        // 2) miniboard is uncontestable, so all other valid miniboards and cells are playable
         assert!(!b.is_valid_move(1, 7));
 
         assert!(b.is_valid_move(6, 8));
         assert!(b.is_valid_move(6, 7));
 
         let uncontestable_minboard = 8;
-        b.set_meta_data(
-            uncontestable_minboard,
-            board::flag::MINIBOARD_STATUS,
-            board::flag::STATUS_BIT_SIZE,
-            board::flag::STATUS_X_WIN as u32,
-        );
+        b.set_status_of(uncontestable_minboard, flag::STATUS_X_WIN as u32);
 
         for row in 0..9 {
             for column in 0..9 {
@@ -85,12 +80,7 @@ mod tests {
         let (_row, _column) = (1, 1);
         let _move_corresponding = Board::move_corresponding_miniboard(_row, _column);
         b.do_move(_row, _column, 1);
-        b.set_meta_data(
-            _move_corresponding,
-            board::flag::MINIBOARD_STATUS,
-            board::flag::STATUS_BIT_SIZE,
-            board::flag::STATUS_X_WIN as u32,
-        );
+        b.set_status_of(_move_corresponding, flag::STATUS_X_WIN as u32);
 
         for row in 0..9 {
             for col in 0..9 {
@@ -120,8 +110,6 @@ mod tests {
         board.set_cell(4, 4, 1);
         board.set_cell(4, 5, 1);
 
-        //board._check_miniboard_status(4);
-
         board.set_cell(5, 3, 2);
         board.set_cell(5, 4, 2);
         board.set_cell(5, 5, 2);
@@ -144,7 +132,7 @@ mod tests {
 
         let miniboard = Board::move_miniboard(0, 0);
         let win = board.check_miniboard_status(miniboard);
-        let winner = board.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
+        let winner = board.get_status_of(miniboard);
         assert!(win);
         assert_eq!(winner, flag::STATUS_O_WIN as u32);
         board.reset();
@@ -179,34 +167,34 @@ mod tests {
         board.do_move(6, 6, 1);
         board.do_move(6, 7, 2);
         board.do_move(6, 8, 1);
-        println!("{:?}", board.get_meta_data(8, flag::MINIBOARD_MOVE_COUNT, MOVE_COUNT_BIT_SIZE));
+        //println!("{:?}", board.get_status_of(8));
 
         board.do_move(7, 6, 2);
         board.do_move(7, 7, 1);
         board.do_move(7, 8, 2);
-        println!("{:?}", board.get_meta_data(8, flag::MINIBOARD_MOVE_COUNT, MOVE_COUNT_BIT_SIZE));
 
         board.do_move(8, 6, 2);
         board.do_move(8, 7, 1);
         board.do_move(8, 8, 2);
-        println!("{:?}", board.get_meta_data(8, flag::MINIBOARD_MOVE_COUNT, MOVE_COUNT_BIT_SIZE));
 
         let status_changed = board.check_miniboard_status(8);
-        let status = board.get_meta_data(8, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
-        println!("movecount: {:?}", board.get_meta_data(8, flag::MINIBOARD_MOVE_COUNT, MOVE_COUNT_BIT_SIZE));
+        let status = board.get_status_of(8);
+        println!("movecount: {:?}", board.get_status_of(8));
         assert!(status_changed);
         assert_eq!(status, flag::STATUS_DRAW as u32);
 
         // 9 moves is a draw
         // change the last 3 rows to make x win and have 9 moves made 
-        board.set_meta_data(8, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE, 6);
+        board.set_move_count_of(8, 6);
         board.do_move(8, 6, 1);
         board.do_move(8, 7, 2);
         board.do_move(8, 8, 1);
         
+        let move_count = board.get_move_count_of(8);
         let status_changed = board.check_miniboard_status(8);
-        let status = board.get_meta_data(8, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
+        let status = board.get_status_of(8);
         //println!("movecount: {:?}", board.get_meta_data(8, flag::MINIBOARD_MOVE_COUNT, MOVE_COUNT_BIT_SIZE));
+        assert_eq!(move_count, 9);
         assert!(status_changed);
         assert_eq!(status, flag::STATUS_X_WIN as u32);
     }
