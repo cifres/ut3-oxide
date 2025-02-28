@@ -306,7 +306,7 @@ impl Board {
             let mut xo_wonline = 0u32;
 
             // Create a mask to later get the cells for that winning line
-            // Mask out those cells but as if X or O occupied those cells 
+            // Mask in those cells but as if X or O occupied those cells 
             for (row, column) in line {
                 let offset = (column + row * 3) * 2;
                 line_mask |= 0b11 << offset;
@@ -324,6 +324,7 @@ impl Board {
             // with draw being 3
             assert!(status < flag::STATUS_DRAW);   
 
+            // Short-circuit and return early if a winning line is matched
             self.set_status_of(miniboard, status as u32);
             if status > flag::STATUS_CONTESTABLE {
                 println!("calc {miniboard} as {}", self.get_status_of(miniboard));
@@ -353,7 +354,7 @@ impl Board {
         // Get miniboard statuses in a winning line of the last_move's miniboard
         let (row, column) = self.last_move;
         let last_player = self.get_cell(row, column);
-        println!("{last_player}");
+        println!("\n{last_player}");
         let miniboard = Self::move_miniboard(row, column);
         let status_changed = self.check_miniboard_status(miniboard);
         let status = self.get_status_of(miniboard);
