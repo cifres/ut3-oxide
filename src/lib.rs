@@ -279,6 +279,7 @@ mod tests {
     fn get_game_status() {
         let mut board = Board::new();
 
+        // x win -- miniboards 3, 4, 5 
         board.do_move(3, 0, 1);
         board.do_move(3, 1, 1);
         board.do_move(3, 2, 1);
@@ -292,16 +293,34 @@ mod tests {
         board.do_move(5, 8, 1);
 
         let gamestatus = board.get_game_status();
-        println!();
         assert_eq!(gamestatus, flag::STATUS_X_WIN);
 
         board.do_move(5, 7, 2);
         let gamestatus = board.get_game_status();
         assert_eq!(gamestatus, flag::STATUS_CONTESTABLE);
 
-        board.do_move(2, 0, 1);
-        board.do_move(2, 1, 1);
-        board.do_move(2, 2, 1);
+        // o win
+        // pretend x didn't form a line in the 5th miniboard and test 
+        board.do_move(5, 8, 0);
+        board.set_status_of(5, flag::STATUS_CONTESTABLE as u32);
+
+        board.do_move(2, 6, 2);
+        board.do_move(2, 7, 2);
+        board.do_move(2, 8, 2);
+
+        board.do_move(3, 6, 2);
+        board.do_move(3, 7, 2);
+        board.do_move(3, 8, 2);
+
+        board.do_move(7, 6, 2);
+        board.do_move(7, 7, 2);
+        board.do_move(7, 8, 2);
         let gamestatus = board.get_game_status();
+
+        assert_eq!(gamestatus, flag::STATUS_O_WIN);
+
+        // draw: every cell full, or every miniboard is uncontestable 
+        //board.do_move(row, column, xoshape);
+
     }
 }
