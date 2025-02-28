@@ -150,6 +150,7 @@ mod tests {
         board.reset();
 
         // row: 2  
+        // x win
         board.do_move(2, 6, 1);
         board.do_move(2, 7, 1);
         board.do_move(2, 8, 1);
@@ -159,6 +160,18 @@ mod tests {
         let winner = board.get_status_of(miniboard);
         assert!(win);
         assert_eq!(winner, flag::STATUS_X_WIN as u32);
+
+        // o win
+        board.do_move(2, 3, 2);
+        board.do_move(2, 4, 2);
+        board.do_move(2, 5, 2);
+
+        let miniboard = Board::move_miniboard(2, 3);
+        let win = board.check_miniboard_status(miniboard);
+        let winner = board.get_status_of(miniboard);
+        assert!(win);
+        assert_eq!(winner, flag::STATUS_O_WIN as u32);
+
         board.reset();
 
         /* column wise, vertical line: 0 */
@@ -195,19 +208,6 @@ mod tests {
         assert_eq!(winner, flag::STATUS_O_WIN as u32);
         board.reset();
 
-        /* diagonal line */
-        // diagonal: 1
-        board.do_move(6, 2, 1);
-        board.do_move(7, 1, 1);
-        board.do_move(8, 0, 1);
-
-        let miniboard = Board::move_miniboard(6, 2);
-        let win = board.check_miniboard_status(miniboard);
-        let winner = board.get_status_of(miniboard);
-        assert!(win);
-        assert_eq!(winner, flag::STATUS_X_WIN as u32);
-        board.reset();
-    
         // diagonal: 0
         // A winning line found with 9 moves is still a win, not a draw
         board.do_move(6, 6, 1);
@@ -232,6 +232,7 @@ mod tests {
         // 9 moves is a draw but ensure priority to win checking
         // by changing last 3 rows to make x win and have 9 moves made 
         board.set_move_count_of(miniboard, 6);
+        board.set_status_of(miniboard, flag::STATUS_CONTESTABLE as u32);
         board.do_move(8, 6, 1);
         board.do_move(8, 7, 2);
         board.do_move(8, 8, 1);
@@ -242,5 +243,65 @@ mod tests {
         assert_eq!(move_count, 9);
         assert!(status_changed);
         assert_eq!(status, flag::STATUS_X_WIN as u32);
+        board.reset();
+
+        /* diagonal line */
+        // diagonal: 1
+        board.do_move(6, 2, 1);
+        board.do_move(7, 1, 1);
+        board.do_move(8, 0, 1);
+
+        let miniboard = Board::move_miniboard(6, 2);
+        let win = board.check_miniboard_status(miniboard);
+        let winner = board.get_status_of(miniboard);
+        assert!(win);
+        assert_eq!(winner, flag::STATUS_X_WIN as u32);
+        board.reset();
+
+        /* combined test*/
+        // contestable board with Xs and Os is won by X;
+        let miniboard = Board::move_miniboard(3, 4);
+        board.do_move(3, 3, 1);
+        board.do_move(3, 4, 2);
+        board.do_move(3, 5, 2);
+        assert!(!board.check_miniboard_status(miniboard));
+
+        board.do_move(4, 3, 2);
+        board.do_move(4, 4, 1);
+        assert!(!board.check_miniboard_status(miniboard));
+
+        board.do_move(5, 5, 1);
+        assert!(board.check_miniboard_status(miniboard));
+        assert_eq!(board.get_status_of(miniboard), flag::STATUS_X_WIN as u32);
+    }
+
+    #[test]
+    fn get_game_status() {
+        let mut board = Board::new();
+
+        board.do_move(3, 0, 1);
+        board.do_move(3, 1, 1);
+        board.do_move(3, 2, 1);
+
+        board.do_move(3, 4, 1);
+        board.do_move(4, 4, 1);
+        board.do_move(5, 4, 1);
+
+        board.do_move(3, 6, 1);
+        board.do_move(4, 7, 1);
+        board.do_move(5, 8, 1);
+
+        let gamestatus = board.get_game_status();
+        println!();
+        assert_eq!(gamestatus, flag::STATUS_X_WIN);
+
+        board.do_move(5, 7, 2);
+        let gamestatus = board.get_game_status();
+        assert_eq!(gamestatus, flag::STATUS_CONTESTABLE);
+
+        board.do_move(2, 0, 1);
+        board.do_move(2, 1, 1);
+        board.do_move(2, 2, 1);
+        let gamestatus = board.get_game_status();
     }
 }

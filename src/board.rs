@@ -1,9 +1,5 @@
 use std::fmt::{self};
 
-/// u32 board row format:
-/// most significant bit <- -> least significant bit
-/// [14 bits meta data] - [18 bits cell data]
-/// meta data [10 bits empty -- move_count 4 bits -- miniboard_status 2 bits]
 pub mod flag {
     pub const MINIBOARD_STATUS:     u32 = 20;
     pub const STATUS_BIT_SIZE:      u32 = 0b11;
@@ -17,6 +13,7 @@ pub mod flag {
 
     pub const NEW_GAME:             u8  = u8::MAX;
 
+    pub const EMPTY:                u8  = 0;
     pub const X_SHAPE:              u8  = 1;
     pub const O_SHAPE:              u8  = 2;
 }
@@ -73,6 +70,11 @@ const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
 
 const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines(); 
 
+/// `u32` board row format:
+/// most significant bit <- -> least significant bit
+/// `[14 bits meta data - 18 bits cell data]`
+/// `9` cells x `2` bits per cell = `18` bits 
+/// meta data `10` bits empty -- move_count `4` bits -- miniboard_status `2` bits
 #[derive(Debug)]
 pub struct Board {
     pub main_board: [u32; 9],
@@ -176,6 +178,7 @@ impl Board {
     pub fn do_move(&mut self, row: u8, column: u8, xoshape: u32) {
         assert!(row < 9);
         assert!(column < 9);
+        assert!(xoshape <= 2);
 
         self.set_cell(row, column, xoshape);
         self.prev_move = (row, column);
@@ -216,10 +219,10 @@ impl Board {
     }
 
     /// validate moves by ensuring that invalidity if:
-    /// 1) cell is occupied
-    /// 2) miniboard is 'uncontestable' i.e. won by X or O, or drawn
-    /// 3) miniboard coords don't correspond to previous move
-    /// 4) exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
+    /// * cell is occupied
+    /// * miniboard is 'uncontestable' i.e. won by X or O, or drawn
+    /// * miniboard coords don't correspond to previous move
+    /// * exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
     ///     empty, and it's board is contestable
     pub fn is_valid_move(&self, row: u8, column: u8) -> bool {
         assert!(row < 9);
@@ -269,54 +272,76 @@ impl Board {
         self.main_board = [0; 9];
     }
 
-    // TODO: make dynamic with X or O not just O as `2`
     /// Checks and calculates the miniboard's status based on any winning lines
     /// Short-circuits and stops as soon as any winning line is found
-    /// Use with `get_status`
+    /// Use with `get_status_of(miniboard: u8)`
     /// Returns a `bool` with `true` indicating the miniboard's status isn't `flag::STATUS_CONTESTABLE`
     /// i.e, `flag::STATUS_X_WIN`, `flag::STATUS_O_WIN`, or `flag::STATUS_DRAW` 
     pub fn check_miniboard_status(&mut self, miniboard: u8) -> bool {
-        // match row pattern to 101010 (2, 2, 2) -> 42 
-        // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
+
+        // early exit miniboards that cannot be won/lost/drawn yet.
+        if self.get_move_count_of(miniboard) < 3 {
+            println!("nocalc {miniboard} as state {} for movecount < 3", self.get_status_of(miniboard));
+            debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE as u32);
+            return false;
+        }
+
+        // Don't recheck/recalculate winning lines for an uncontestable (won/drawn) miniboard
+        // Remove to trigger recalculation for usage with AI do/undo move pattern
+        if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE as u32 {
+            println!("nocalc {miniboard} as state {}", self.get_status_of(miniboard));
+            return true;
+        }
 
         // movecount == 9 drawn
-        // nothing changed:  contestable
-        // Compare bitshifted miniboard cells to the same bitshifted wonline pattern
+        // Compare winning-line pattern masked miniboard cells to X and O wonline pattern
+        // E.g. match row pattern to 101010 (2, 2, 2) -> 42 
+        // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
         let cells = self.get_miniboard_cells(miniboard);
+        let last_player = self.get_cell(self.prev_move.0, self.prev_move.1);
+        assert_ne!(last_player, flag::EMPTY as u32);
         for line in WINNING_LINES {
             //println!("{line:?}");
-            let mut mask = 0u32;
-            let mut x_wonline = 0u32;
-            let mut o_wonline = 0u32;
+            let mut line_mask = 0u32;
+            let mut xo_wonline = 0u32;
 
             // Create a mask to later get the cells for that winning line
             // Mask out those cells but as if X or O occupied those cells 
             for (row, column) in line {
                 let offset = (column + row * 3) * 2;
-                mask |= 0b11 << offset;
-                x_wonline |= (flag::X_SHAPE as u32) << offset;
-                o_wonline |= (flag::O_SHAPE as u32) << offset;
+                line_mask |= 0b11 << offset;
+                xo_wonline |= last_player << offset;
             }
 
-            let masked_line = cells & mask;
-            let xwin = masked_line == x_wonline;
-            let owin = masked_line == o_wonline;
-            let piecewin = ((xwin as u8) * flag::X_SHAPE) | ((owin as u8) * flag::O_SHAPE); 
-            assert_ne!(piecewin, 3);    // Only X or O can win a miniboard
-            //println!("X: {xwin} O: {owin} -> win: {piecewin}");
+            // If a line's cells are all the same, a winning line is formed
+            // so it's (0 for no wonline OR 1 for a wonline) * (1 as X OR 2 as O) 
+            // i.e. (0 OR 1) * (1 OR 2) 
+            let masked_line = cells & line_mask;
+            let xowin = masked_line == xo_wonline;
+            let status = (xowin as u8) * last_player as u8; 
 
-            self.set_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE, piecewin as u32);
-            if piecewin > 0 {
+            // Only X or O can win a miniboard which are represented by 1 and 2 respectively
+            // with draw being 3
+            assert!(status < flag::STATUS_DRAW);   
+
+            self.set_status_of(miniboard, status as u32);
+            if status > flag::STATUS_CONTESTABLE {
+                println!("calc {miniboard} as {}", self.get_status_of(miniboard));
                 return true;
             }
         }
 
-        let move_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE);
+        // Reaching here means no winning lines were found
+        // So, we check for a draw -- otherwise, it's still contestable
+        let move_count = self.get_move_count_of(miniboard);
         if move_count == 9 {
-            self.set_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE, flag::STATUS_DRAW as u32);
+            println!("calcd with draw for {miniboard} as {}", self.get_status_of(miniboard));
+            self.set_status_of(miniboard, flag::STATUS_DRAW as u32);
             return true;
         }
-            
+        
+        debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE as u32);
+
         false
     }
 
@@ -324,27 +349,30 @@ impl Board {
     // Compare against last player's move only for masking 
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
-    pub fn _get_game_status(&mut self) -> u8 {
+    pub fn get_game_status(&mut self) -> u8 {
         // Get miniboard statuses in a winning line of the prev_move's miniboard
         let (row, column) = self.prev_move;
         let prev_player = self.get_cell(row, column);
+        println!("{prev_player}");
         let miniboard = Self::move_miniboard(row, column);
-        let coords = (miniboard / 3, miniboard % 3);
         let status_changed = self.check_miniboard_status(miniboard);
         let status = self.get_status_of(miniboard);
 
-        if !status_changed && status != (flag::STATUS_DRAW as u32) {
+        // If the miniboard's status is won by the previous move that was just masked_line
+        // then check for board winning lines intersecting that miniboard
+        // otherwise, exit because the game's state cannot change 
+        if !status_changed && status != prev_player {
             return flag::STATUS_CONTESTABLE;
         }
 
         // in a winning line...
         // get winning lines intersecting with the last move's miniboard
+        let coords = (miniboard / 3, miniboard % 3);
         let potential_lines = WINNING_LINES
             .iter()
             .filter(|line| line.contains(&coords))
             .collect::<Vec<_>>();
-
-        println!("{potential_lines:?}");
+        //println!("{potential_lines:?}");
 
         for line in potential_lines {
             let mut statusbits = 0u32;
@@ -353,28 +381,29 @@ impl Board {
                 let miniboard = column + row * 3;
                 let _ = self.check_miniboard_status(miniboard);
                 let status = self.get_status_of(miniboard);
-                println!("{status}");
+                //println!("{status}");
                 
                 let offset = (column + row * 3) * 2;
                 statusbits |= status << offset;
                 xoline |= prev_player << offset;
             }
             let won = statusbits == xoline;
-            println!("w/l {won} = {statusbits} - {statusbits:032b} - {xoline}");
+            //println!("w/l {won} = {statusbits} - {statusbits:032b} - {xoline}");
             if won {
                 return prev_player as u8;
             }
         }
 
-        // draw checking
-        // all miniboards drawn -- no valid moves
-        // miniboards.reduce(move_count) == 81
-        for i in 0..self.main_board.len() as u32 {
-            let row = self.get_row_cells(i);
-            const n: u32 = 0b101001_100010_010101;
+        // draw checking -- 1 contestable board suffices as a contestable game technically
+        for miniboard in 0..self.main_board.len() as u8 {
+            let status = self.get_status_of(miniboard);
+            if status == flag::STATUS_CONTESTABLE as u32 {
+                return flag::STATUS_CONTESTABLE;
+            }
         }
-    
-        flag::STATUS_CONTESTABLE
+
+        // otherwise, it's drawn.
+        flag::STATUS_DRAW
     }
 
     /// Returns a miniboard's cells in;
