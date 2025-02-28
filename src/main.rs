@@ -41,7 +41,7 @@ fn main() -> std::fmt::Result {
     board.do_move(5, 7, 2);
     board.do_move(5, 8, 2);
 
-    let n = board._get_game_status();
+    let n = board.get_game_status();
     println!("{n}");
 
     board.do_move(3, 3, 2);
