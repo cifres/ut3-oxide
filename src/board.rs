@@ -78,13 +78,13 @@ const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines();
 #[derive(Debug)]
 pub struct Board {
     pub main_board: [u32; 9],
-    prev_move: (u8, u8),
+    last_move: (u8, u8),
 }
 
 impl Board {
 
     pub fn new() -> Self {
-        Board { main_board: [0; 9], prev_move: (flag::NEW_GAME, flag::NEW_GAME) }
+        Board { main_board: [0; 9], last_move: (flag::NEW_GAME, flag::NEW_GAME) }
     }
 
     /* Cell Operations */
@@ -181,7 +181,7 @@ impl Board {
         assert!(xoshape <= 2);
 
         self.set_cell(row, column, xoshape);
-        self.prev_move = (row, column);
+        self.last_move = (row, column);
         let miniboard = Self::move_miniboard(row, column);
         let move_count = self.get_meta_data(
             miniboard,
@@ -221,7 +221,7 @@ impl Board {
     /// validate moves by ensuring that invalidity if:
     /// * cell is occupied
     /// * miniboard is 'uncontestable' i.e. won by X or O, or drawn
-    /// * miniboard coords don't correspond to previous move
+    /// * miniboard coords don't correspond to last move
     /// * exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
     ///     empty, and it's board is contestable
     pub fn is_valid_move(&self, row: u8, column: u8) -> bool {
@@ -232,7 +232,7 @@ impl Board {
         let miniboard = Self::move_miniboard(row, column);
         let miniboard_status = self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
 
-        if self.prev_move.0 == flag::NEW_GAME && self.prev_move.1 == flag::NEW_GAME {
+        if self.last_move.0 == flag::NEW_GAME && self.last_move.1 == flag::NEW_GAME {
             //println!("valid {:?}", (row, column));
             return true;
         }
@@ -241,8 +241,8 @@ impl Board {
             return false;
         }
         
-        let (prev_row, prev_column) = self.prev_move;
-        let corresponding_miniboard = Self::move_corresponding_miniboard(prev_row, prev_column);
+        let (last_row, last_column) = self.last_move;
+        let corresponding_miniboard = Self::move_corresponding_miniboard(last_row, last_column);
 
         let corresponding_miniboard_status = self.get_meta_data(
             corresponding_miniboard,
@@ -268,7 +268,7 @@ impl Board {
     }
 
     pub fn reset(&mut self) {
-        self.prev_move = (flag::NEW_GAME, flag::NEW_GAME);
+        self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
     }
 
@@ -298,7 +298,7 @@ impl Board {
         // E.g. match row pattern to 101010 (2, 2, 2) -> 42 
         // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
         let cells = self.get_miniboard_cells(miniboard);
-        let last_player = self.get_cell(self.prev_move.0, self.prev_move.1);
+        let last_player = self.get_cell(self.last_move.0, self.last_move.1);
         assert_ne!(last_player, flag::EMPTY as u32);
         for line in WINNING_LINES {
             //println!("{line:?}");
@@ -350,18 +350,18 @@ impl Board {
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
     pub fn get_game_status(&mut self) -> u8 {
-        // Get miniboard statuses in a winning line of the prev_move's miniboard
-        let (row, column) = self.prev_move;
-        let prev_player = self.get_cell(row, column);
-        println!("{prev_player}");
+        // Get miniboard statuses in a winning line of the last_move's miniboard
+        let (row, column) = self.last_move;
+        let last_player = self.get_cell(row, column);
+        println!("{last_player}");
         let miniboard = Self::move_miniboard(row, column);
         let status_changed = self.check_miniboard_status(miniboard);
         let status = self.get_status_of(miniboard);
 
-        // If the miniboard's status is won by the previous move that was just masked_line
+        // If the miniboard's status is won by the last move that was just masked_line
         // then check for board winning lines intersecting that miniboard
         // otherwise, exit because the game's state cannot change 
-        if !status_changed && status != prev_player {
+        if !status_changed && status != last_player {
             return flag::STATUS_CONTESTABLE;
         }
 
@@ -385,12 +385,12 @@ impl Board {
                 
                 let offset = (column + row * 3) * 2;
                 statusbits |= status << offset;
-                xoline |= prev_player << offset;
+                xoline |= last_player << offset;
             }
             let won = statusbits == xoline;
             //println!("w/l {won} = {statusbits} - {statusbits:032b} - {xoline}");
             if won {
-                return prev_player as u8;
+                return last_player as u8;
             }
         }
 
