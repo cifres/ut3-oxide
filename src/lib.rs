@@ -127,6 +127,9 @@ mod tests {
 
         /* row-wise horizontal line: 0 */
         board.do_move(0, 0, 2);
+        assert!(!board.check_miniboard_status(0));
+        assert_eq!(board.get_status_of(0), flag::STATUS_CONTESTABLE as u32);
+
         board.do_move(0, 1, 2);
         board.do_move(0, 2, 2);
 
@@ -285,6 +288,7 @@ mod tests {
         board.do_move(3, 0, 1);
         board.do_move(3, 1, 1);
         board.do_move(3, 2, 1);
+        assert_eq!(board.get_game_status(), flag::STATUS_CONTESTABLE);
 
         board.do_move(3, 4, 1);
         board.do_move(4, 4, 1);
