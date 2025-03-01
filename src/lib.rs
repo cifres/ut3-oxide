@@ -225,7 +225,7 @@ mod tests {
         let miniboard = Board::move_miniboard(6, 6);
         let status_changed = board.check_miniboard_status(miniboard);
         let status = board.get_status_of(miniboard);
-        println!("movecount: {:?}", board.get_status_of(miniboard));
+        println!("movecount: {:?}", board.get_move_count_of(miniboard));
         assert!(status_changed);
         assert_eq!(status, flag::STATUS_DRAW as u32);
 
@@ -273,6 +273,8 @@ mod tests {
         board.do_move(5, 5, 1);
         assert!(board.check_miniboard_status(miniboard));
         assert_eq!(board.get_status_of(miniboard), flag::STATUS_X_WIN as u32);
+        board.reset();
+
     }
 
     #[test]
@@ -321,6 +323,34 @@ mod tests {
 
         // draw: every cell full, or every miniboard is uncontestable 
         //board.do_move(row, column, xoshape);
+        println!("\ndraw test game status");
+        board.reset();
+        // all boards drawn
 
+        for i in 0..9 {
+            board.set_status_of(i, flag::STATUS_DRAW as u32);
+        }
+        // artificially move 4, 4 to trigger scanning every miniboard
+        // because 4, 4 is in miniboard 4 which intersects all other miniboards
+        board.do_move(4, 4, 2);
+        assert_eq!(board.get_game_status(), flag::STATUS_DRAW);
+
+        // all miniboards are uncontestable (won/drawn for X/O not in a winning line)
+        board.set_status_of(0, flag::STATUS_X_WIN as u32);
+        board.set_status_of(1, flag::STATUS_O_WIN as u32);
+        board.set_status_of(2, flag::STATUS_X_WIN as u32);
+
+        board.set_status_of(3, flag::STATUS_X_WIN as u32);
+        board.set_status_of(4, flag::STATUS_O_WIN as u32);
+        board.set_status_of(5, flag::STATUS_X_WIN as u32);
+
+        board.set_status_of(6, flag::STATUS_O_WIN as u32);
+        board.set_status_of(7, flag::STATUS_DRAW as u32);
+        board.set_status_of(8, flag::STATUS_O_WIN as u32);
+
+        board.do_move(4, 4, 2);
+        assert!(board.check_miniboard_status(4));
+        assert_ne!(board.get_status_of(4), flag::STATUS_CONTESTABLE as u32);
+        assert_eq!(board.get_game_status(), flag::STATUS_DRAW);
     }
 }
