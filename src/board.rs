@@ -88,6 +88,7 @@ impl Board {
     }
 
     /* Cell Operations */
+    #[inline(always)]
     pub const fn get_cell(&self, row: u8, column: u8) -> u32 {
         let offset = column * 2;
         let mask = 0b11 << offset;
@@ -95,6 +96,7 @@ impl Board {
         (self.main_board[row as usize] & mask) >> offset
     }
 
+    #[inline(always)]
     pub const fn set_cell(&mut self, row: u8, column: u8, xoshape: u32) {
         // clear bits
         let row = row as usize;
@@ -117,7 +119,7 @@ impl Board {
 
     /* Miniboard Meta Data */
 
-    //#[inline(always)]
+    #[inline(always)]
     pub const fn set_meta_data(&mut self, miniboard: u8, flag_pos: u32, flag_size: u32, value: u32) {
         // clear the occupying bits
         let miniboard = miniboard as usize;
@@ -129,6 +131,7 @@ impl Board {
         self.main_board[miniboard] |= mask;
     }
 
+    #[inline(always)]
     pub const fn get_meta_data(&self, miniboard: u8, flag_pos: u32, flag_size: u32) -> u32 {
         assert!(miniboard < 9);
 
@@ -278,7 +281,6 @@ impl Board {
     /// Returns a `bool` with `true` indicating the miniboard's status isn't `flag::STATUS_CONTESTABLE`
     /// i.e, `flag::STATUS_X_WIN`, `flag::STATUS_O_WIN`, or `flag::STATUS_DRAW` 
     pub fn check_miniboard_status(&mut self, miniboard: u8) -> bool {
-
 
         // Don't recheck/recalculate winning lines for an uncontestable (won/drawn) miniboard
         // Remove to trigger recalculation for usage with AI do/undo move pattern
