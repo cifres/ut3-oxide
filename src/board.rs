@@ -1,15 +1,15 @@
 use std::fmt::{self};
 
 pub mod flag {
-    pub const MINIBOARD_STATUS:     u32 = 20;
-    pub const STATUS_BIT_SIZE:      u32 = 0b11;
+    pub const MINIBOARD_STATUS:     u8 = 20;
+    pub const STATUS_BIT_SIZE:      u8 = 0b11;
     pub const STATUS_CONTESTABLE:   u8  = 0;
     pub const STATUS_X_WIN:         u8  = 1;
     pub const STATUS_O_WIN:         u8  = 2;
     pub const STATUS_DRAW:          u8  = 3;
 
-    pub const MINIBOARD_MOVE_COUNT: u32 = 22;
-    pub const MOVE_COUNT_BIT_SIZE:  u32 = 0b1111;
+    pub const MINIBOARD_MOVE_COUNT: u8 = 22;
+    pub const MOVE_COUNT_BIT_SIZE:  u8 = 0b1111;
 
     pub const NEW_GAME:             u8  = u8::MAX;
 
@@ -89,83 +89,82 @@ impl Board {
 
     /* Cell Operations */
     #[inline(always)]
-    pub const fn get_cell(&self, row: u8, column: u8) -> u32 {
+    pub const fn get_cell(&self, row: u8, column: u8) -> u8 {
         let offset = column * 2;
         let mask = 0b11 << offset;
         
-        (self.main_board[row as usize] & mask) >> offset
+        ((self.main_board[row as usize] & mask) >> offset) as u8
     }
 
     #[inline(always)]
-    pub const fn set_cell(&mut self, row: u8, column: u8, xoshape: u32) {
+    pub const fn set_cell(&mut self, row: u8, column: u8, xoshape: u8) {
         // clear bits
         let row = row as usize;
         let offset = column * 2;
         let mask = 0b11 << offset;
-        self.main_board[row] &= !mask; 
+        self.main_board[row] &= !(mask as u32); 
         
         // set bits
-        let mask = xoshape << offset;
+        let mask = (xoshape as u32) << offset;
         self.main_board[row] |= mask;
     }
 
-    fn _check_cell(&self, row: usize, column: usize, shape: u32) -> bool {
+    fn _check_cell(&self, row: u8, column: u8, shape: u8) -> bool {
         let offset = column * 2;
         let mask = 0b11 << offset;
 
-        let result = (self.main_board[row] & mask) >> offset;
-        shape == result
+        let result = (self.main_board[row as usize] & mask) >> offset;
+        shape as u32 == result
     }
 
     /* Miniboard Meta Data */
 
     #[inline(always)]
-    pub const fn set_meta_data(&mut self, miniboard: u8, flag_pos: u32, flag_size: u32, value: u32) {
+    pub const fn set_meta_data(&mut self, miniboard: u8, flag_pos: u8, flag_size: u8, value: u8) {
         // clear the occupying bits
         let miniboard = miniboard as usize;
-        let mask = flag_size << flag_pos;
-        self.main_board[miniboard] &= !mask;
+        let mask = (flag_size as u32) << flag_pos;
+        self.main_board[miniboard] &= !(mask);
 
         // set the cleared bits
-        let mask = value << flag_pos;
+        let mask = (value as u32) << flag_pos;
         self.main_board[miniboard] |= mask;
     }
 
     #[inline(always)]
-    pub const fn get_meta_data(&self, miniboard: u8, flag_pos: u32, flag_size: u32) -> u32 {
+    pub const fn get_meta_data(&self, miniboard: u8, flag_pos: u8, flag_size: u8) -> u8 {
         assert!(miniboard < 9);
 
-        let mask = flag_size << flag_pos;
-        (self.main_board[miniboard as usize] & mask) >> flag_pos
+        let mask = (flag_size as u32) << flag_pos;
+        ((self.main_board[miniboard as usize] & mask) >> flag_pos) as u8
     }
 
     #[inline(always)]
-    pub fn get_status_of(&self, miniboard: u8) -> u32 {
+    pub fn get_status_of(&self, miniboard: u8) -> u8 {
         self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE) 
     }
 
     #[inline(always)]
-    pub fn set_status_of(&mut self, miniboard: u8, value: u32) {
-        assert!(value <= flag::STATUS_DRAW as u32);
+    pub fn set_status_of(&mut self, miniboard: u8, value: u8) {
+        assert!(value <= flag::STATUS_DRAW);
         self.set_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE, value);
     }
     
     #[inline(always)]
     pub fn get_move_count_of(&self, miniboard: u8) -> u8 {
-        self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE) as u8
+        self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE)
     }
 
     #[inline(always)]
-    pub fn set_move_count_of(&mut self, miniboard: u8, value: u32) {
+    pub fn set_move_count_of(&mut self, miniboard: u8, value: u8) {
         self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE, value); 
     }
 
     /* Row-wise operations  */
 
-    // TODO: u32 -> u8 arg
     /// Create a mask where there are only 1s over the `18` bits for the u32 row
     /// with the remaining `14` being 0s to zero-out the row metadata.
-    const fn get_row_cells(&self, row: u32) -> u32 {
+    const fn get_row_cells(&self, row: u8) -> u32 {
         let mask = (1 << 18) - 1;
         self.main_board[row as usize] & mask 
     }
@@ -178,7 +177,7 @@ impl Board {
 
     /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply 
     /// minboard status checks
-    pub fn do_move(&mut self, row: u8, column: u8, xoshape: u32) {
+    pub fn do_move(&mut self, row: u8, column: u8, xoshape: u8) {
         assert!(row < 9);
         assert!(column < 9);
         assert!(xoshape <= 2);
@@ -253,12 +252,12 @@ impl Board {
             flag::STATUS_BIT_SIZE
         );
 
-        if corresponding_miniboard_status != flag::STATUS_CONTESTABLE as u32 &&
-        miniboard_status == flag::STATUS_CONTESTABLE as u32 { 
+        if corresponding_miniboard_status != flag::STATUS_CONTESTABLE &&
+        miniboard_status == flag::STATUS_CONTESTABLE { 
             return true; 
         }
 
-        if miniboard_status != flag::STATUS_CONTESTABLE as u32 {
+        if miniboard_status != flag::STATUS_CONTESTABLE {
             return false;
         }
 
@@ -284,7 +283,7 @@ impl Board {
 
         // Don't recheck/recalculate winning lines for an uncontestable (won/drawn) miniboard
         // Remove to trigger recalculation for usage with AI do/undo move pattern
-        if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE as u32 {
+        if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
             println!("nocalc {miniboard} as state {}", self.get_status_of(miniboard));
             return true;
         }
@@ -292,7 +291,7 @@ impl Board {
         // early exit miniboards that cannot be won/lost/drawn yet.
         if self.get_move_count_of(miniboard) < 3 {
             println!("nocalc {miniboard} as state {} for movecount < 3", self.get_status_of(miniboard));
-            debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE as u32);
+            debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
             return false;
         }
 
@@ -302,7 +301,7 @@ impl Board {
         // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
         let cells = self.get_miniboard_cells(miniboard);
         let last_player = self.get_cell(self.last_move.0, self.last_move.1);
-        assert_ne!(last_player, flag::EMPTY as u32);
+        assert_ne!(last_player, flag::EMPTY);
         for line in WINNING_LINES {
             //println!("{line:?}");
             let mut line_mask = 0u32;
@@ -313,7 +312,7 @@ impl Board {
             for (row, column) in line {
                 let offset = (column + row * 3) * 2;
                 line_mask |= 0b11 << offset;
-                xo_wonline |= last_player << offset;
+                xo_wonline |= (last_player as u32) << offset;
             }
 
             // If a line's cells are all the same, a winning line is formed
@@ -321,14 +320,14 @@ impl Board {
             // i.e. (0 OR 1) * (1 OR 2) 
             let masked_line = cells & line_mask;
             let xowin = masked_line == xo_wonline;
-            let status = (xowin as u8) * last_player as u8; 
+            let status = (xowin as u8) * last_player; 
 
             // Only X or O can win a miniboard which are represented by 1 and 2 respectively
             // with draw being 3
             assert!(status < flag::STATUS_DRAW);   
 
             // Short-circuit and return early if a winning line is matched
-            self.set_status_of(miniboard, status as u32);
+            self.set_status_of(miniboard, status);
             if status > flag::STATUS_CONTESTABLE {
                 println!("calc {miniboard} as {}", self.get_status_of(miniboard));
                 return true;
@@ -340,11 +339,11 @@ impl Board {
         let move_count = self.get_move_count_of(miniboard);
         if move_count == 9 {
             println!("calcd with draw for {miniboard} as {}", self.get_status_of(miniboard));
-            self.set_status_of(miniboard, flag::STATUS_DRAW as u32);
+            self.set_status_of(miniboard, flag::STATUS_DRAW);
             return true;
         }
         
-        debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE as u32);
+        debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
 
         false
     }
@@ -388,20 +387,20 @@ impl Board {
                 //println!("{status}");
                 
                 let offset = (column + row * 3) * 2;
-                statusbits |= status << offset;
-                xoline |= last_player << offset;
+                statusbits |= (status as u32) << offset;
+                xoline |= (last_player as u32) << offset;
             }
             let won = statusbits == xoline;
             //println!("w/l {won} = {statusbits} - {statusbits:032b} - {xoline}");
             if won {
-                return last_player as u8;
+                return last_player;
             }
         }
 
         // draw checking -- 1 contestable board suffices as a contestable game technically
         for miniboard in 0..self.main_board.len() as u8 {
             let status = self.get_status_of(miniboard);
-            if status == flag::STATUS_CONTESTABLE as u32 {
+            if status == flag::STATUS_CONTESTABLE {
                 return flag::STATUS_CONTESTABLE;
             }
         }
@@ -425,7 +424,7 @@ impl Board {
                 // * 2 to account for cell bit length of 2;
                 let mask_offset = (row * 3 + column) * 2;
                 let cell = self.get_cell(starting_row + row, starting_column + column);
-                let mask = cell << mask_offset;
+                let mask = (cell as u32) << mask_offset;
                 cells |= mask; 
             }
         }
@@ -490,7 +489,7 @@ impl fmt::Display for Board {
             //Ok(())
         } else {
             for i in 0..self.main_board.len() {
-                writeln!(f, "[{i}]: cells[{:18b}]-meta[{:14b}]", self.get_row_cells(i as u32), self.main_board[i] >> 18)?
+                writeln!(f, "[{i}]: cells[{:18b}]-meta[{:14b}]", self.get_row_cells(i as u8), self.main_board[i] >> 18)?
             }
             Ok(())
         }
