@@ -279,18 +279,19 @@ impl Board {
     /// i.e, `flag::STATUS_X_WIN`, `flag::STATUS_O_WIN`, or `flag::STATUS_DRAW` 
     pub fn check_miniboard_status(&mut self, miniboard: u8) -> bool {
 
-        // early exit miniboards that cannot be won/lost/drawn yet.
-        if self.get_move_count_of(miniboard) < 3 {
-            println!("nocalc {miniboard} as state {} for movecount < 3", self.get_status_of(miniboard));
-            debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE as u32);
-            return false;
-        }
 
         // Don't recheck/recalculate winning lines for an uncontestable (won/drawn) miniboard
         // Remove to trigger recalculation for usage with AI do/undo move pattern
         if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE as u32 {
             println!("nocalc {miniboard} as state {}", self.get_status_of(miniboard));
             return true;
+        }
+
+        // early exit miniboards that cannot be won/lost/drawn yet.
+        if self.get_move_count_of(miniboard) < 3 {
+            println!("nocalc {miniboard} as state {} for movecount < 3", self.get_status_of(miniboard));
+            debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE as u32);
+            return false;
         }
 
         // movecount == 9 drawn
