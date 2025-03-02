@@ -1,22 +1,22 @@
 use std::fmt::{self};
 
 pub mod flag {
-    pub const MINIBOARD_STATUS:                       u8 = 20;
-    pub (in crate::board) const STATUS_BIT_SIZE:      u8 = 0b11;
-    pub const STATUS_CONTESTABLE:                     u8 = 0;
-    pub const STATUS_X_WIN:                           u8 = 1;
-    pub const STATUS_O_WIN:                           u8 = 2;
-    pub const STATUS_DRAW:                            u8 = 3;
+    pub const MINIBOARD_STATUS:                         u8 = 20;
+    pub (in crate::board) const STATUS_BIT_SIZE:        u8 = 0b11;
+    pub const STATUS_CONTESTABLE:                       u8 = 0;
+    pub const STATUS_X_WIN:                             u8 = 1;
+    pub const STATUS_O_WIN:                             u8 = 2;
+    pub const STATUS_DRAW:                              u8 = 3;
 
-    pub (in crate::board) const MOVE_COUNT_X:         u8 = 22;
-    pub (in crate::board) const MOVE_COUNT_O:         u8 = 26;
-    pub (in crate::board) const MOVE_COUNT_BIT_SIZE:  u8 = 0b1111;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_X: u8 = 22;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_O: u8 = 26;
+    pub (in crate::board) const MOVE_COUNT_BIT_SIZE:    u8 = 0b1111;
 
-    pub const NEW_GAME:                               u8 = u8::MAX;
+    pub const NEW_GAME:                                 u8 = u8::MAX;
 
-    pub const EMPTY:                                  u8 = 0;
-    pub const X_SHAPE:                                u8 = 1;
-    pub const O_SHAPE:                                u8 = 2;
+    pub const EMPTY:                                    u8 = 0;
+    pub const X_SHAPE:                                  u8 = 1;
+    pub const O_SHAPE:                                  u8 = 2;
 }
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
@@ -75,17 +75,24 @@ const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines();
 /// most significant bit <- -> least significant bit
 /// `[14 bits meta data -- 18 bits cell data]`
 /// `9` cells x `2` bits per cell = `18` bits 
-/// meta data `10` bits empty -- move_count `4` bits -- miniboard_status `2` bits
+/// meta data `4` bits empty -- move_count o `4` bits -- move_count x `4` bits -- miniboard_status `2` bits
 #[derive(Debug, Clone)]
 pub struct Board {
     pub main_board: [u32; 9],
     last_move: (u8, u8),    // The last valid move that was made 
+    x_mb_wincount: u8,
+    o_mb_wincount: u8,
 }
 
 impl Board {
 
     pub fn new() -> Self {
-        Board { main_board: [0; 9], last_move: (flag::NEW_GAME, flag::NEW_GAME) }
+        Board { 
+            main_board: [0; 9],
+            last_move: (flag::NEW_GAME, flag::NEW_GAME),
+            x_mb_wincount: 0,
+            o_mb_wincount: 0,
+        }
     }
 
     /* Cell Operations */
@@ -153,23 +160,30 @@ impl Board {
     
     #[inline(always)]
     pub fn get_total_move_count_of(&self, miniboard: u8) -> u8 {
-        let x_count = self.get_meta_data(miniboard, flag::MOVE_COUNT_X, flag::MOVE_COUNT_BIT_SIZE);
-        let o_count = self.get_meta_data(miniboard, flag::MOVE_COUNT_O, flag::MOVE_COUNT_BIT_SIZE);
+        let x_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_X, flag::MOVE_COUNT_BIT_SIZE);
+        let o_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_O, flag::MOVE_COUNT_BIT_SIZE);
         x_count + o_count
     }
 
     #[inline(always)]
     pub fn get_shape_move_count_of(&self, miniboard: u8, shape: u8) -> u8 {
         // maps 1 => 22 and 2 => 26
-        let shape_movecount = flag::MOVE_COUNT_X + (shape - 1) * 4;
+        let shape_movecount = flag::MINIBOARD_MOVE_COUNT_X + (shape - 1) * 4;
+        assert!(
+            shape_movecount == flag::MINIBOARD_MOVE_COUNT_X
+            || shape_movecount == flag::MINIBOARD_MOVE_COUNT_O
+        );
         self.get_meta_data(miniboard, shape_movecount, flag::MOVE_COUNT_BIT_SIZE)
     }
 
     #[inline(always)]
     pub fn set_move_count_of(&mut self, miniboard: u8, value: u8, shape: u8) {
         // maps 1 => 22 and 2 => 26
-        let shape_movecount = flag::MOVE_COUNT_X + (shape - 1) * 4;
-        assert!(shape_movecount == flag::MOVE_COUNT_X || shape_movecount == flag::MOVE_COUNT_O);
+        let shape_movecount = flag::MINIBOARD_MOVE_COUNT_X + (shape - 1) * 4;
+        assert!(
+            shape_movecount == flag::MINIBOARD_MOVE_COUNT_X
+            || shape_movecount == flag::MINIBOARD_MOVE_COUNT_O
+        );
         self.set_meta_data(miniboard, shape_movecount, flag::MOVE_COUNT_BIT_SIZE, value); 
     }
 
@@ -230,38 +244,39 @@ impl Board {
     /// * miniboard is 'uncontestable' i.e. won by X or O, or drawn
     /// * miniboard coords don't correspond to last move
     /// * exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
-    ///     empty, and it's board is contestable
+    ///     empty, and its board is contestable
     pub fn is_valid_move(&self, row: u8, column: u8) -> bool {
         assert!(row < 9);
         assert!(column < 9);
 
-        let cell = self.get_cell(row, column); 
-        let miniboard = Self::move_miniboard(row, column);
-        let miniboard_status = self.get_status_of(miniboard);
-
-        if self.last_move.0 == flag::NEW_GAME && self.last_move.1 == flag::NEW_GAME {
+        if self.last_move == (flag::NEW_GAME, flag::NEW_GAME) {
             //println!("valid {:?}", (row, column));
             return true;
         }
 
-        if cell != 0 {
-            return false;
-        }
-        
+        let miniboard = Self::move_miniboard(row, column);
         let (last_row, last_column) = self.last_move;
         let corresponding_miniboard = Self::move_corresponding_miniboard(last_row, last_column);
-        let corresponding_miniboard_status = self.get_status_of(corresponding_miniboard);
 
-        if corresponding_miniboard_status != flag::STATUS_CONTESTABLE &&
-        miniboard_status == flag::STATUS_CONTESTABLE { 
-            return true; 
-        }
+        let cell_is_empty = self.get_cell(row, column) == flag::EMPTY; 
 
-        if miniboard_status != flag::STATUS_CONTESTABLE {
+        if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
             return false;
         }
 
+        // if the miniboard doesn't correspond with the last move...
         if miniboard != corresponding_miniboard {
+            // and the corresponding miniboard is uncontestable, whereas the selected miniboard is
+            // and the cell is empty, allow the exception
+            if self.get_status_of(corresponding_miniboard) != flag::STATUS_CONTESTABLE
+            && cell_is_empty {
+                return true;
+            }
+
+            return false;
+        }
+
+        if !cell_is_empty {
             return false;
         }
 
@@ -326,10 +341,10 @@ impl Board {
 
             // Only X or O can win a miniboard which are represented by 1 and 2 respectively
             // with draw being 3
-            assert!(status < flag::STATUS_DRAW);   
+            debug_assert!(status < flag::STATUS_DRAW);   
+            self.set_status_of(miniboard, status);
 
             // Short-circuit and return early if a winning line is matched
-            self.set_status_of(miniboard, status);
             if status > flag::STATUS_CONTESTABLE {
                 println!("calc {miniboard} as {}", self.get_status_of(miniboard));
                 return true;

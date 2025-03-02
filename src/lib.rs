@@ -37,63 +37,76 @@ mod tests {
     /// 3) miniboard coords don't correspond to previous move
     #[test]
     fn is_valid_move_test() {
-        let mut b = Board::default();
+        let mut board = Board::default();
 
         // 1) cell is occupied
-        b.do_move(5, 5, 1);
-        assert!(!b.is_valid_move(5, 5));
+        board.do_move(5, 5, 1);
+        assert!(!board.is_valid_move(5, 5));
 
-        // 2) miniboard is uncontestable, so all other valid miniboards and cells are playable
-        assert!(!b.is_valid_move(1, 7));
+        assert!(!board.is_valid_move(1, 7));
 
-        assert!(b.is_valid_move(6, 8));
-        assert!(b.is_valid_move(6, 7));
+        assert!(board.is_valid_move(6, 8));
+        assert!(board.is_valid_move(6, 7));
 
-        let uncontestable_minboard = 8;
-        b.set_status_of(uncontestable_minboard, flag::STATUS_X_WIN);
+        // 2) corresponding miniboard is uncontestable, so all other valid miniboards and cells are playable
+        // provided that the selected miniboard and cell are contestable and empty respectively.
+
+        let corresponding_miniboard = Board::move_corresponding_miniboard(5, 5);
+        let uncontestable_corresponding_miniboard = corresponding_miniboard;
+        let uncontestable_miniboard = 3;
+        let occuipied_cell = (0, 2);
+
+        board.set_cell(occuipied_cell.0, occuipied_cell.1, 2);
+        board.set_status_of(uncontestable_corresponding_miniboard, flag::STATUS_X_WIN);
+        board.set_status_of(uncontestable_miniboard, flag::STATUS_X_WIN);
+
 
         for row in 0..9 {
             for column in 0..9 {
+                let move_miniboard = Board::move_miniboard(row, column);
                 if (row, column) == (5, 5)
-                    || Board::move_miniboard(row, column) == uncontestable_minboard
+                || (row, column) == occuipied_cell 
+                || move_miniboard == uncontestable_miniboard
+                || move_miniboard == uncontestable_corresponding_miniboard
                 {
+                    assert!(!board.is_valid_move(row, column), "{row} {column} was valid but shouldn't be");
                     continue;
                 }
 
-                assert!(b.is_valid_move(row, column), "{row} {column} was invalid!");
+                assert!(board.is_valid_move(row, column), "{row} {column} was invalid but should be valid");
             }
         }
 
-        b.reset();
+        board.reset();
 
         // 3) miniboard coordinate correspondence/matching
         let (_row, _column) = (2, 2);
-        let _corresponding_miniboard = Board::move_corresponding_miniboard(_row, _column);
-        assert_eq!(_corresponding_miniboard, 8);
+        let corresponding_miniboard = Board::move_corresponding_miniboard(_row, _column);
+        assert_eq!(corresponding_miniboard, 8);
 
-        assert!(b.is_valid_move(_row, _column));
-        b.do_move(_row, _column, 1);
+        assert!(board.is_valid_move(_row, _column));
+        board.do_move(_row, _column, 1);
 
-        assert!(b.is_valid_move(7, 7));
-        b.reset();
+        assert!(board.is_valid_move(7, 7));
+        board.reset();
 
         // 4) exception of uncontestable minboard to play any other valid miniboard
         let (_row, _column) = (1, 1);
-        let _move_corresponding = Board::move_corresponding_miniboard(_row, _column);
-        b.do_move(_row, _column, 1);
-        b.set_status_of(_move_corresponding, flag::STATUS_X_WIN);
+        let move_corresponding = Board::move_corresponding_miniboard(_row, _column);
+        board.do_move(_row, _column, 1);
+        board.set_status_of(move_corresponding, flag::STATUS_X_WIN);
 
         for row in 0..9 {
             for col in 0..9 {
-                if Board::move_miniboard(row, col) == _move_corresponding
+                if Board::move_miniboard(row, col) == move_corresponding
                     || (row, col) == (_row, _column)
                 {
                     println!("{row}, {col}");
-                    assert!(!b.is_valid_move(row, col));
+                    assert!(!board.is_valid_move(row, col));
                     continue;
                 }
 
-                assert!(b.is_valid_move(row, col));
+                assert!(board.is_valid_move(row, col));
             }
         }
     }
