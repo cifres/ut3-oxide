@@ -235,7 +235,8 @@ mod tests {
 
         // 9 moves is a draw but ensure priority to win checking
         // by changing last 3 rows to make x win and have 9 moves made 
-        board.set_move_count_of(miniboard, 6);
+        board.set_move_count_of(miniboard, 3, 1);
+        board.set_move_count_of(miniboard, 3, 2);
         board.set_status_of(miniboard, flag::STATUS_CONTESTABLE);
         board.do_move(8, 6, 1);
         board.do_move(8, 7, 2);
@@ -308,7 +309,7 @@ mod tests {
 
         // o win
         // pretend x didn't form a line in the 5th miniboard and test 
-        board.do_move(5, 8, 0);
+        board.set_cell(5, 8, 0);
         board.set_status_of(5, flag::STATUS_CONTESTABLE);
 
         board.do_move(2, 6, 2);
