@@ -1,12 +1,13 @@
 mod board;
+mod ai;
 
+use ai::AI;
 //use board::{flag::{MINIBOARD_MOVE_COUNT, MINIBOARD_STATUS}, Board};
 use board::Board;
 
 fn main() -> std::fmt::Result {
     let mut board = Board::new();
     //board.main_board[0] = 4_294_119_914;
-
 
     board.is_valid_move(5, 5);
     board.do_move(5, 5, 1);
@@ -41,15 +42,14 @@ fn main() -> std::fmt::Result {
     board.do_move(5, 7, 2);
     board.do_move(5, 8, 2);
 
-    let n = board.get_game_status();
+    let n = board.calculate_game_status();
     println!("{n}");
 
     board.do_move(3, 3, 2);
     board.do_move(4, 4, 2);
     board.do_move(5, 5, 2);
 
-    board.check_miniboard_status(4);
-
+    board.calculate_miniboard_status(4);
     //for i in 0..9 {
     //
     //    println!("{i} -> {}", board.get_meta_data(4, board::flag::MINIBOARD_MOVE_COUNT, board::flag:: MOVE_COUNT_BIT_SIZE));
