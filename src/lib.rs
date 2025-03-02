@@ -23,9 +23,9 @@ mod tests {
         board.do_move(5, 5, 2);
 
         let miniboard = Board::move_miniboard(3, 3);
-        let movecount = board.get_move_count_of(miniboard);
-        let left_miniboard_movecount = board.get_move_count_of(miniboard - 1);
-        let right_miniboard_movecount = board.get_move_count_of(miniboard + 1);
+        let movecount = board.get_total_move_count_of(miniboard);
+        let left_miniboard_movecount = board.get_total_move_count_of(miniboard - 1);
+        let right_miniboard_movecount = board.get_total_move_count_of(miniboard + 1);
 
         assert_eq!(movecount, 9, "move count was {movecount} for minboard {miniboard} when it should be 9");
         assert_eq!(left_miniboard_movecount, 0);
@@ -229,7 +229,7 @@ mod tests {
         let miniboard = Board::move_miniboard(6, 6);
         let status_changed = board.calculate_miniboard_status(miniboard);
         let status = board.get_status_of(miniboard);
-        println!("movecount: {:?}", board.get_move_count_of(miniboard));
+        println!("movecount: {:?}", board.get_total_move_count_of(miniboard));
         assert!(status_changed);
         assert_eq!(status, flag::STATUS_DRAW);
 
@@ -242,7 +242,7 @@ mod tests {
         board.do_move(8, 7, 2);
         board.do_move(8, 8, 1);
         
-        let move_count = board.get_move_count_of(miniboard);
+        let move_count = board.get_total_move_count_of(miniboard);
         let status_changed = board.calculate_miniboard_status(miniboard);
         let status = board.get_status_of(miniboard);
         assert_eq!(move_count, 9);

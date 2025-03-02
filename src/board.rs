@@ -1,22 +1,22 @@
 use std::fmt::{self};
 
 pub mod flag {
-    pub const MINIBOARD_STATUS:     u8 = 20;
-    pub const STATUS_BIT_SIZE:      u8 = 0b11;
-    pub const STATUS_CONTESTABLE:   u8 = 0;
-    pub const STATUS_X_WIN:         u8 = 1;
-    pub const STATUS_O_WIN:         u8 = 2;
-    pub const STATUS_DRAW:          u8 = 3;
+    pub const MINIBOARD_STATUS:                       u8 = 20;
+    pub (in crate::board) const STATUS_BIT_SIZE:      u8 = 0b11;
+    pub const STATUS_CONTESTABLE:                     u8 = 0;
+    pub const STATUS_X_WIN:                           u8 = 1;
+    pub const STATUS_O_WIN:                           u8 = 2;
+    pub const STATUS_DRAW:                            u8 = 3;
 
-    pub const MOVE_COUNT_X:         u8 = 22;
-    pub const MOVE_COUNT_O:         u8 = 26;
-    pub const MOVE_COUNT_BIT_SIZE:  u8 = 0b1111;
+    pub (in crate::board) const MOVE_COUNT_X:         u8 = 22;
+    pub (in crate::board) const MOVE_COUNT_O:         u8 = 26;
+    pub (in crate::board) const MOVE_COUNT_BIT_SIZE:  u8 = 0b1111;
 
-    pub const NEW_GAME:             u8 = u8::MAX;
+    pub const NEW_GAME:                               u8 = u8::MAX;
 
-    pub const EMPTY:                u8 = 0;
-    pub const X_SHAPE:              u8 = 1;
-    pub const O_SHAPE:              u8 = 2;
+    pub const EMPTY:                                  u8 = 0;
+    pub const X_SHAPE:                                u8 = 1;
+    pub const O_SHAPE:                                u8 = 2;
 }
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
@@ -152,7 +152,7 @@ impl Board {
     }
     
     #[inline(always)]
-    pub fn get_move_count_of(&self, miniboard: u8) -> u8 {
+    pub fn get_total_move_count_of(&self, miniboard: u8) -> u8 {
         let x_count = self.get_meta_data(miniboard, flag::MOVE_COUNT_X, flag::MOVE_COUNT_BIT_SIZE);
         let o_count = self.get_meta_data(miniboard, flag::MOVE_COUNT_O, flag::MOVE_COUNT_BIT_SIZE);
         x_count + o_count
@@ -288,9 +288,12 @@ impl Board {
             return true;
         }
 
+        let last_player = self.get_cell(self.last_move.0, self.last_move.1);
+        assert_ne!(last_player, flag::EMPTY);
+
         // early exit miniboards that cannot be won/lost/drawn yet.
-        if self.get_move_count_of(miniboard) < 3 {
-            println!("nocalc cached {miniboard} as state {} -- movecount < 3", self.get_status_of(miniboard));
+        if self.get_shape_move_count_of(miniboard, last_player) < 3 {
+            println!("nocalc cached {miniboard} as state {} -- movecount < 3 for {last_player}", self.get_status_of(miniboard));
             debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
             return false;
         }
@@ -300,8 +303,6 @@ impl Board {
         // E.g. match row pattern to 101010 (2, 2, 2) -> 42 
         // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
         let cells = self.get_miniboard_cells(miniboard);
-        let last_player = self.get_cell(self.last_move.0, self.last_move.1);
-        assert_ne!(last_player, flag::EMPTY);
 
         for line in WINNING_LINES {
             //println!("{line:?}");
@@ -337,7 +338,7 @@ impl Board {
 
         // Reaching here means no winning lines were found
         // So, we check for a draw -- otherwise, it's still contestable
-        let move_count = self.get_move_count_of(miniboard);
+        let move_count = self.get_total_move_count_of(miniboard);
         if move_count == 9 {
             println!("calcd with draw for {miniboard} as {}", self.get_status_of(miniboard));
             self.set_status_of(miniboard, flag::STATUS_DRAW);
