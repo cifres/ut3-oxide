@@ -337,8 +337,10 @@ mod tests {
         board.do_move(7, 7, 2);
         board.do_move(7, 8, 2);
         let gamestatus = board.calculate_game_status();
+        let o_mbwincount = board.get_miniboard_win_count_of(2);
 
         assert_eq!(gamestatus, flag::STATUS_O_WIN);
+        assert_eq!(o_mbwincount, 3);
 
         // draw: every cell full, or every miniboard is uncontestable 
         //board.do_move(row, column, xoshape);
@@ -385,5 +387,20 @@ mod tests {
         board.set_miniboard_win_count_of(1, 5);
         assert_eq!(board.get_miniboard_win_count_of(1), 5);
         assert_eq!(board.get_miniboard_win_count_of(2), 0);
+        
+        // move test
+        assert_eq!(board.get_miniboard_win_count_of(2), 0);
+
+        board.do_move(4, 3, 2);
+        board.do_move(4, 4, 2);
+        board.do_move(4, 5, 2);
+
+        board.do_move(3, 0, 2);
+        board.do_move(4, 0, 2);
+        board.do_move(5, 0, 2);
+
+        board.calculate_game_status();
+        assert_eq!(board.get_miniboard_win_count_of(2), 2);
+
     }
 }
