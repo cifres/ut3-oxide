@@ -77,6 +77,7 @@ const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines();
 /// `[14 bits meta data -- 18 bits cell data]`
 /// `9` cells x `2` bits per cell = `18` bits 
 /// meta data `4` bits empty -- move_count o `4` bits -- move_count x `4` bits -- miniboard_status `2` bits
+/// xo_miniboard_win_count: `[00 -- 000 -- 000]` -> `[empty -- O win count -- X win count]`
 #[derive(Debug, Clone)]
 pub struct Board {
     pub main_board: [u32; 9],
@@ -103,6 +104,7 @@ impl Board {
 
     pub fn set_miniboard_win_count_of(&mut self, shape: u8, value: u8) {
         assert!(shape == flag::X_SHAPE || shape == flag::O_SHAPE);
+        assert!(value <= 7);    // 7 is the max for 0b111
         let offset = (shape - 1) * 3;
 
         // clear bits
@@ -111,7 +113,7 @@ impl Board {
 
         // set bits
         win_count |= value << offset;
-        self.xo_miniboard_win_count |= win_count;
+        self.xo_miniboard_win_count = win_count;
     }
 
     /* Cell Operations */
@@ -231,6 +233,7 @@ impl Board {
 
         self.set_cell(row, column, xoshape);
         self.last_move = (row, column);
+
         let miniboard = Self::move_miniboard(row, column);
         let move_count = self.get_shape_move_count_of(miniboard, xoshape);
         self.set_move_count_of(miniboard, move_count + 1, xoshape);
@@ -306,6 +309,7 @@ impl Board {
     pub fn reset(&mut self) {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
+        self.xo_miniboard_win_count = 0;
     }
 
     /// Checks and calculates the miniboard's status based on any winning lines
@@ -318,7 +322,7 @@ impl Board {
         // Don't recheck/recalculate winning lines for an uncontestable (won/lost/drawn) miniboard
         // Remove to trigger recalculation for usage with AI do/undo move pattern
         if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
-            println!("nocalc cached {miniboard} as state {}", self.get_status_of(miniboard));
+            //println!("nocalc cached {miniboard} as state {}", self.get_status_of(miniboard));
             return true;
         }
 
@@ -327,7 +331,7 @@ impl Board {
 
         // early exit miniboards that cannot be won/lost/drawn yet.
         if self.get_shape_move_count_of(miniboard, last_player) < 3 {
-            println!("nocalc cached {miniboard} as state {} -- movecount < 3 for {last_player}", self.get_status_of(miniboard));
+            //println!("nocalc cached {miniboard} as state {} -- movecount < 3 for {last_player}", self.get_status_of(miniboard));
             debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
             return false;
         }
@@ -365,7 +369,11 @@ impl Board {
 
             // Short-circuit and return early if a winning line is matched
             if status > flag::STATUS_CONTESTABLE {
-                println!("calc {miniboard} as {}", self.get_status_of(miniboard));
+                //println!("calc {miniboard} as {}", self.get_status_of(miniboard));
+                let shape = status;
+                let xo_mbwincount = self.get_miniboard_win_count_of(shape);
+                self.set_miniboard_win_count_of(shape, xo_mbwincount + 1);
+
                 return true;
             }
         }
@@ -374,7 +382,7 @@ impl Board {
         // So, we check for a draw -- otherwise, it's still contestable
         let move_count = self.get_total_move_count_of(miniboard);
         if move_count == 9 {
-            println!("calcd with draw for {miniboard} as {}", self.get_status_of(miniboard));
+            //println!("calcd with draw for {miniboard} as {}", self.get_status_of(miniboard));
             self.set_status_of(miniboard, flag::STATUS_DRAW);
             return true;
         }
@@ -398,10 +406,11 @@ impl Board {
         let status = self.get_status_of(miniboard);
 
         // If the miniboard's status is won by the last move that was just made
+        // and they've won more than 2 miniboards 
         // then check for board winning lines intersecting that miniboard
         // otherwise, exit because the game's state cannot change 
-        let xo_miniboard_win_count = 0;
-        if !status_changed && status != last_player && xo_miniboard_win_count == 2 {
+        let xo_mbwincount = self.get_miniboard_win_count_of(last_player);
+        if !status_changed && status != last_player && xo_mbwincount > 2 {
             return flag::STATUS_CONTESTABLE;
         }
 
