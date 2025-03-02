@@ -1,5 +1,6 @@
 use std::fmt::{self};
 
+#[allow(dead_code)]
 pub mod flag {
     pub const MINIBOARD_STATUS:                         u8 = 20;
     pub (in crate::board) const STATUS_BIT_SIZE:        u8 = 0b11;
@@ -80,8 +81,7 @@ const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines();
 pub struct Board {
     pub main_board: [u32; 9],
     last_move: (u8, u8),    // The last valid move that was made 
-    x_mb_wincount: u8,
-    o_mb_wincount: u8,
+    xo_miniboard_win_count: u8,
 }
 
 impl Board {
@@ -90,9 +90,28 @@ impl Board {
         Board { 
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
-            x_mb_wincount: 0,
-            o_mb_wincount: 0,
+            xo_miniboard_win_count: 0,
         }
+    }
+
+    pub fn get_miniboard_win_count_of(&self, shape: u8) -> u8 {
+        assert!(shape == flag::X_SHAPE || shape == flag::O_SHAPE);
+        let offset = (shape - 1) * 3;
+        let mask = 0b111 << offset; 
+        (self.xo_miniboard_win_count & mask) >> offset
+    }
+
+    pub fn set_miniboard_win_count_of(&mut self, shape: u8, value: u8) {
+        assert!(shape == flag::X_SHAPE || shape == flag::O_SHAPE);
+        let offset = (shape - 1) * 3;
+
+        // clear bits
+        let mask = 0b111 << offset; 
+        let mut win_count = self.xo_miniboard_win_count & !mask;
+
+        // set bits
+        win_count |= value << offset;
+        self.xo_miniboard_win_count |= win_count;
     }
 
     /* Cell Operations */
@@ -100,7 +119,7 @@ impl Board {
     pub const fn get_cell(&self, row: u8, column: u8) -> u8 {
         let offset = column * 2;
         let mask = 0b11 << offset;
-        
+
         ((self.main_board[row as usize] & mask) >> offset) as u8
     }
 
@@ -378,10 +397,11 @@ impl Board {
         let status_changed = self.calculate_miniboard_status(miniboard);
         let status = self.get_status_of(miniboard);
 
-        // If the miniboard's status is won by the last move that was just masked_line
+        // If the miniboard's status is won by the last move that was just made
         // then check for board winning lines intersecting that miniboard
         // otherwise, exit because the game's state cannot change 
-        if !status_changed && status != last_player {
+        let xo_miniboard_win_count = 0;
+        if !status_changed && status != last_player && xo_miniboard_win_count == 2 {
             return flag::STATUS_CONTESTABLE;
         }
 
