@@ -3,19 +3,20 @@ use std::fmt::{self};
 pub mod flag {
     pub const MINIBOARD_STATUS:     u8 = 20;
     pub const STATUS_BIT_SIZE:      u8 = 0b11;
-    pub const STATUS_CONTESTABLE:   u8  = 0;
-    pub const STATUS_X_WIN:         u8  = 1;
-    pub const STATUS_O_WIN:         u8  = 2;
-    pub const STATUS_DRAW:          u8  = 3;
+    pub const STATUS_CONTESTABLE:   u8 = 0;
+    pub const STATUS_X_WIN:         u8 = 1;
+    pub const STATUS_O_WIN:         u8 = 2;
+    pub const STATUS_DRAW:          u8 = 3;
 
-    pub const MINIBOARD_MOVE_COUNT: u8 = 22;
+    pub const MOVE_COUNT_X:         u8 = 22;
+    pub const MOVE_COUNT_O:         u8 = 26;
     pub const MOVE_COUNT_BIT_SIZE:  u8 = 0b1111;
 
-    pub const NEW_GAME:             u8  = u8::MAX;
+    pub const NEW_GAME:             u8 = u8::MAX;
 
-    pub const EMPTY:                u8  = 0;
-    pub const X_SHAPE:              u8  = 1;
-    pub const O_SHAPE:              u8  = 2;
+    pub const EMPTY:                u8 = 0;
+    pub const X_SHAPE:              u8 = 1;
+    pub const O_SHAPE:              u8 = 2;
 }
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
@@ -72,7 +73,7 @@ const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines();
 
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
-/// `[14 bits meta data - 18 bits cell data]`
+/// `[14 bits meta data -- 18 bits cell data]`
 /// `9` cells x `2` bits per cell = `18` bits 
 /// meta data `10` bits empty -- move_count `4` bits -- miniboard_status `2` bits
 #[derive(Debug, Clone)]
@@ -152,12 +153,24 @@ impl Board {
     
     #[inline(always)]
     pub fn get_move_count_of(&self, miniboard: u8) -> u8 {
-        self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE)
+        let x_count = self.get_meta_data(miniboard, flag::MOVE_COUNT_X, flag::MOVE_COUNT_BIT_SIZE);
+        let o_count = self.get_meta_data(miniboard, flag::MOVE_COUNT_O, flag::MOVE_COUNT_BIT_SIZE);
+        x_count + o_count
     }
 
     #[inline(always)]
-    pub fn set_move_count_of(&mut self, miniboard: u8, value: u8) {
-        self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT, flag::MOVE_COUNT_BIT_SIZE, value); 
+    pub fn get_shape_move_count_of(&self, miniboard: u8, shape: u8) -> u8 {
+        // maps 1 => 22 and 2 => 26
+        let shape_movecount = flag::MOVE_COUNT_X + (shape - 1) * 4;
+        self.get_meta_data(miniboard, shape_movecount, flag::MOVE_COUNT_BIT_SIZE)
+    }
+
+    #[inline(always)]
+    pub fn set_move_count_of(&mut self, miniboard: u8, value: u8, shape: u8) {
+        // maps 1 => 22 and 2 => 26
+        let shape_movecount = flag::MOVE_COUNT_X + (shape - 1) * 4;
+        assert!(shape_movecount == flag::MOVE_COUNT_X || shape_movecount == flag::MOVE_COUNT_O);
+        self.set_meta_data(miniboard, shape_movecount, flag::MOVE_COUNT_BIT_SIZE, value); 
     }
 
     /* Row-wise operations  */
@@ -181,12 +194,13 @@ impl Board {
         assert!(row < 9);
         assert!(column < 9);
         assert!(xoshape <= 2);
+        debug_assert_ne!(xoshape, 0, "shape was 0! must be 1 or 2");
 
         self.set_cell(row, column, xoshape);
         self.last_move = (row, column);
         let miniboard = Self::move_miniboard(row, column);
-        let move_count = self.get_move_count_of(miniboard);
-        self.set_move_count_of(miniboard, move_count + 1);
+        let move_count = self.get_shape_move_count_of(miniboard, xoshape);
+        self.set_move_count_of(miniboard, move_count + 1, xoshape);
 
         assert!(move_count <= 9);
     }
