@@ -2,22 +2,22 @@ use std::fmt::{self};
 
 #[allow(dead_code)]
 pub mod flag {
-    pub const MINIBOARD_STATUS:                         u8 = 20;
-    pub (in crate::board) const STATUS_BIT_SIZE:        u8 = 0b11;
-    pub const STATUS_CONTESTABLE:                       u8 = 0;
-    pub const STATUS_X_WIN:                             u8 = 1;
-    pub const STATUS_O_WIN:                             u8 = 2;
-    pub const STATUS_DRAW:                              u8 = 3;
+    pub const MINIBOARD_STATUS:                          u8 = 20;
+    pub (in crate::board) const STATUS_BIT_SIZE:         u8 = 0b11;
+    pub const STATUS_CONTESTABLE:                        u8 = 0;
+    pub const STATUS_X_WIN:                              u8 = 1;
+    pub const STATUS_O_WIN:                              u8 = 2;
+    pub const STATUS_DRAW:                               u8 = 3;
 
-    pub (in crate::board) const MINIBOARD_MOVE_COUNT_X: u8 = 22;
-    pub (in crate::board) const MINIBOARD_MOVE_COUNT_O: u8 = 26;
-    pub (in crate::board) const MOVE_COUNT_BIT_SIZE:    u8 = 0b1111;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_X:  u8 = 22;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_O:  u8 = 26;
+    pub (in crate::board) const MOVE_COUNT_BIT_SIZE:     u8 = 0b1111;
 
-    pub const NEW_GAME:                                 u8 = u8::MAX;
+    pub const NEW_GAME:                                  u8 = u8::MAX;
 
-    pub const EMPTY:                                    u8 = 0;
-    pub const X_SHAPE:                                  u8 = 1;
-    pub const O_SHAPE:                                  u8 = 2;
+    pub const EMPTY:                                     u8 = 0;
+    pub const X_PLAYER:                                  u8 = 1;
+    pub const O_PLAYER:                                  u8 = 2;
 }
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
@@ -95,17 +95,17 @@ impl Board {
         }
     }
 
-    pub fn get_miniboard_win_count_of(&self, shape: u8) -> u8 {
-        assert!(shape == flag::X_SHAPE || shape == flag::O_SHAPE);
-        let offset = (shape - 1) * 3;
+    pub fn get_miniboard_win_count_of(&self, player: u8) -> u8 {
+        assert!(player == flag::X_PLAYER || player == flag::O_PLAYER);
+        let offset = (player - 1) * 3;
         let mask = 0b111 << offset; 
         (self.xo_miniboard_win_count & mask) >> offset
     }
 
-    pub fn set_miniboard_win_count_of(&mut self, shape: u8, value: u8) {
-        assert!(shape == flag::X_SHAPE || shape == flag::O_SHAPE);
+    pub fn set_miniboard_win_count_of(&mut self, player: u8, value: u8) {
+        assert!(player == flag::X_PLAYER || player == flag::O_PLAYER);
         assert!(value <= 7);    // 7 is the max for 0b111
-        let offset = (shape - 1) * 3;
+        let offset = (player - 1) * 3;
 
         // clear bits
         let mask = 0b111 << offset; 
@@ -126,7 +126,7 @@ impl Board {
     }
 
     #[inline(always)]
-    pub const fn set_cell(&mut self, row: u8, column: u8, xoshape: u8) {
+    pub const fn set_cell(&mut self, row: u8, column: u8, player: u8) {
         // clear bits
         let row = row as usize;
         let offset = column * 2;
@@ -134,16 +134,16 @@ impl Board {
         self.main_board[row] &= !(mask as u32); 
         
         // set bits
-        let mask = (xoshape as u32) << offset;
+        let mask = (player as u32) << offset;
         self.main_board[row] |= mask;
     }
 
-    fn _check_cell(&self, row: u8, column: u8, shape: u8) -> bool {
+    fn _check_cell(&self, row: u8, column: u8, player: u8) -> bool {
         let offset = column * 2;
         let mask = 0b11 << offset;
 
         let result = (self.main_board[row as usize] & mask) >> offset;
-        shape as u32 == result
+        player as u32 == result
     }
 
     /* Miniboard Meta Data */
@@ -187,25 +187,25 @@ impl Board {
     }
 
     #[inline(always)]
-    pub fn get_shape_move_count_of(&self, miniboard: u8, shape: u8) -> u8 {
+    pub fn get_player_move_count_in(&self, miniboard: u8, player: u8) -> u8 {
         // maps 1 => 22 and 2 => 26
-        let shape_movecount = flag::MINIBOARD_MOVE_COUNT_X + (shape - 1) * 4;
+        let player_movecount = flag::MINIBOARD_MOVE_COUNT_X + (player - 1) * 4;
         assert!(
-            shape_movecount == flag::MINIBOARD_MOVE_COUNT_X
-            || shape_movecount == flag::MINIBOARD_MOVE_COUNT_O
+            player_movecount == flag::MINIBOARD_MOVE_COUNT_X
+            || player_movecount == flag::MINIBOARD_MOVE_COUNT_O
         );
-        self.get_meta_data(miniboard, shape_movecount, flag::MOVE_COUNT_BIT_SIZE)
+        self.get_meta_data(miniboard, player_movecount, flag::MOVE_COUNT_BIT_SIZE)
     }
 
     #[inline(always)]
-    pub fn set_move_count_of(&mut self, miniboard: u8, value: u8, shape: u8) {
+    pub fn set_move_count_of(&mut self, miniboard: u8, value: u8, player: u8) {
         // maps 1 => 22 and 2 => 26
-        let shape_movecount = flag::MINIBOARD_MOVE_COUNT_X + (shape - 1) * 4;
+        let player_movecount = flag::MINIBOARD_MOVE_COUNT_X + (player - 1) * 4;
         assert!(
-            shape_movecount == flag::MINIBOARD_MOVE_COUNT_X
-            || shape_movecount == flag::MINIBOARD_MOVE_COUNT_O
+            player_movecount == flag::MINIBOARD_MOVE_COUNT_X
+            || player_movecount == flag::MINIBOARD_MOVE_COUNT_O
         );
-        self.set_meta_data(miniboard, shape_movecount, flag::MOVE_COUNT_BIT_SIZE, value); 
+        self.set_meta_data(miniboard, player_movecount, flag::MOVE_COUNT_BIT_SIZE, value); 
     }
 
     /* Row-wise operations  */
@@ -225,18 +225,18 @@ impl Board {
 
     /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply 
     /// minboard status checks
-    pub fn do_move(&mut self, row: u8, column: u8, xoshape: u8) {
+    pub fn do_move(&mut self, row: u8, column: u8, player: u8) {
         assert!(row < 9);
         assert!(column < 9);
-        assert!(xoshape <= 2);
-        debug_assert_ne!(xoshape, 0, "shape was 0! must be 1 or 2");
+        assert!(player <= 2);
+        debug_assert_ne!(player, 0, "'player' was 0! must be 1 or 2");
 
-        self.set_cell(row, column, xoshape);
+        self.set_cell(row, column, player);
         self.last_move = (row, column);
 
         let miniboard = Self::move_miniboard(row, column);
-        let move_count = self.get_shape_move_count_of(miniboard, xoshape);
-        self.set_move_count_of(miniboard, move_count + 1, xoshape);
+        let move_count = self.get_player_move_count_in(miniboard, player);
+        self.set_move_count_of(miniboard, move_count + 1, player);
 
         assert!(move_count <= 9);
     }
@@ -330,7 +330,7 @@ impl Board {
         assert_ne!(last_player, flag::EMPTY);
 
         // early exit miniboards that cannot be won/lost/drawn yet.
-        if self.get_shape_move_count_of(miniboard, last_player) < 3 {
+        if self.get_player_move_count_in(miniboard, last_player) < 3 {
             //println!("nocalc cached {miniboard} as state {} -- movecount < 3 for {last_player}", self.get_status_of(miniboard));
             debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
             return false;
@@ -370,9 +370,9 @@ impl Board {
             // Short-circuit and return early if a winning line is matched
             if status > flag::STATUS_CONTESTABLE {
                 //println!("calc {miniboard} as {}", self.get_status_of(miniboard));
-                let shape = status;
-                let xo_mbwincount = self.get_miniboard_win_count_of(shape);
-                self.set_miniboard_win_count_of(shape, xo_mbwincount + 1);
+                let player = status;
+                let xo_mbwincount = self.get_miniboard_win_count_of(player);
+                self.set_miniboard_win_count_of(player, xo_mbwincount + 1);
 
                 return true;
             }
