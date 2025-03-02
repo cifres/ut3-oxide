@@ -372,4 +372,18 @@ mod tests {
         assert_ne!(board.get_status_of(4), flag::STATUS_CONTESTABLE);
         assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
     }
+
+    #[test]
+    fn miniboard_win_count() {
+        let mut board = Board::new();
+
+        let xwincount = board.get_miniboard_win_count_of(1);
+        let owincount = board.get_miniboard_win_count_of(2);
+        assert_eq!(xwincount, 0);
+        assert_eq!(owincount, 0);
+
+        board.set_miniboard_win_count_of(1, 5);
+        assert_eq!(board.get_miniboard_win_count_of(1), 5);
+        assert_eq!(board.get_miniboard_win_count_of(2), 0);
+    }
 }
