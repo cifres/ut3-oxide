@@ -75,10 +75,10 @@ const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines();
 /// `[14 bits meta data - 18 bits cell data]`
 /// `9` cells x `2` bits per cell = `18` bits 
 /// meta data `10` bits empty -- move_count `4` bits -- miniboard_status `2` bits
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Board {
     pub main_board: [u32; 9],
-    last_move: (u8, u8),
+    last_move: (u8, u8),    // The last valid move that was made 
 }
 
 impl Board {
@@ -185,19 +185,10 @@ impl Board {
         self.set_cell(row, column, xoshape);
         self.last_move = (row, column);
         let miniboard = Self::move_miniboard(row, column);
-        let move_count = self.get_meta_data(
-            miniboard,
-            flag::MINIBOARD_MOVE_COUNT,
-            flag::MOVE_COUNT_BIT_SIZE
-        );
-        self.set_meta_data(
-            miniboard,
-            flag::MINIBOARD_MOVE_COUNT,
-            flag::MOVE_COUNT_BIT_SIZE,
-            move_count + 1
-        ); 
+        let move_count = self.get_move_count_of(miniboard);
+        self.set_move_count_of(miniboard, move_count + 1);
 
-        assert!(move_count < 10);
+        assert!(move_count <= 9);
     }
 
     /// Returns the miniboard that move is in
@@ -232,7 +223,7 @@ impl Board {
 
         let cell = self.get_cell(row, column); 
         let miniboard = Self::move_miniboard(row, column);
-        let miniboard_status = self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE);
+        let miniboard_status = self.get_status_of(miniboard);
 
         if self.last_move.0 == flag::NEW_GAME && self.last_move.1 == flag::NEW_GAME {
             //println!("valid {:?}", (row, column));
@@ -245,12 +236,7 @@ impl Board {
         
         let (last_row, last_column) = self.last_move;
         let corresponding_miniboard = Self::move_corresponding_miniboard(last_row, last_column);
-
-        let corresponding_miniboard_status = self.get_meta_data(
-            corresponding_miniboard,
-            flag::MINIBOARD_STATUS,
-            flag::STATUS_BIT_SIZE
-        );
+        let corresponding_miniboard_status = self.get_status_of(corresponding_miniboard);
 
         if corresponding_miniboard_status != flag::STATUS_CONTESTABLE &&
         miniboard_status == flag::STATUS_CONTESTABLE { 
@@ -279,18 +265,18 @@ impl Board {
     /// Use with `get_status_of(miniboard: u8)`
     /// Returns a `bool` with `true` indicating the miniboard's status isn't `flag::STATUS_CONTESTABLE`
     /// i.e, `flag::STATUS_X_WIN`, `flag::STATUS_O_WIN`, or `flag::STATUS_DRAW` 
-    pub fn check_miniboard_status(&mut self, miniboard: u8) -> bool {
+    pub fn calculate_miniboard_status(&mut self, miniboard: u8) -> bool {
 
-        // Don't recheck/recalculate winning lines for an uncontestable (won/drawn) miniboard
+        // Don't recheck/recalculate winning lines for an uncontestable (won/lost/drawn) miniboard
         // Remove to trigger recalculation for usage with AI do/undo move pattern
         if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
-            println!("nocalc {miniboard} as state {}", self.get_status_of(miniboard));
+            println!("nocalc cached {miniboard} as state {}", self.get_status_of(miniboard));
             return true;
         }
 
         // early exit miniboards that cannot be won/lost/drawn yet.
         if self.get_move_count_of(miniboard) < 3 {
-            println!("nocalc {miniboard} as state {} for movecount < 3", self.get_status_of(miniboard));
+            println!("nocalc cached {miniboard} as state {} -- movecount < 3", self.get_status_of(miniboard));
             debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
             return false;
         }
@@ -302,6 +288,7 @@ impl Board {
         let cells = self.get_miniboard_cells(miniboard);
         let last_player = self.get_cell(self.last_move.0, self.last_move.1);
         assert_ne!(last_player, flag::EMPTY);
+
         for line in WINNING_LINES {
             //println!("{line:?}");
             let mut line_mask = 0u32;
@@ -352,13 +339,13 @@ impl Board {
     // Compare against last player's move only for masking 
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
-    pub fn get_game_status(&mut self) -> u8 {
+    pub fn calculate_game_status(&mut self) -> u8 {
         // Get miniboard statuses in a winning line of the last_move's miniboard
         let (row, column) = self.last_move;
         let last_player = self.get_cell(row, column);
         println!("\n{last_player}");
         let miniboard = Self::move_miniboard(row, column);
-        let status_changed = self.check_miniboard_status(miniboard);
+        let status_changed = self.calculate_miniboard_status(miniboard);
         let status = self.get_status_of(miniboard);
 
         // If the miniboard's status is won by the last move that was just masked_line
@@ -382,7 +369,7 @@ impl Board {
             let mut xoline = 0u32;
             for &(row, column) in line {
                 let miniboard = column + row * 3;
-                let _ = self.check_miniboard_status(miniboard);
+                let _ = self.calculate_miniboard_status(miniboard);
                 let status = self.get_status_of(miniboard);
                 //println!("{status}");
                 
