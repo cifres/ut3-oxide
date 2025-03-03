@@ -306,17 +306,17 @@ impl Board {
         true
     }
 
-    /// Generates a bitmask from the valid moves on the miniboards
+    /// Generates a bitfield from the valid moves on the miniboards
     /// `1` == valid and `0` == invalid
     pub fn valid_moves_bitfield(&self) -> u128 {
-        let mut moves_validity_bitmask = 0u128;
+        let mut moves_validity_bitfield = 0u128;
 
         // if corresponding is uncontestable, we fully validate the whole board
-        // otherwise, we check for valid moves only in the corresponding miniboard;
+        // otherwise, we check for valid moves only in the corresponding miniboard 
         // full
         let (last_row, last_column) = self.last_move;
         let corresponding_mb = Self::move_corresponding_miniboard(last_row, last_column);
-        if self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE {
+        if self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE && self.last_move.0 != flag::NEW_GAME {
             // TODO: could directly check for cell == empty and first move of the game exception for
             // faster eval?
             let (starting_row, starting_column) = (corresponding_mb / 3 * 3, corresponding_mb % 3 * 3);
@@ -324,21 +324,21 @@ impl Board {
                 for column in starting_column..starting_column + 3 {
                     let valid = self.is_valid_move(row, column);
                     let offset = column + row * 9;
-                    moves_validity_bitmask |= (valid as u128) << offset;
+                    moves_validity_bitfield |= (valid as u128) << offset;
                 }
             }
 
-            moves_validity_bitmask
+            moves_validity_bitfield
         } else {
            for row in 0..9 {
                 for column in 0..9 {
                     let valid = self.is_valid_move(row, column);
                     let offset = column + row * 9;
-                    moves_validity_bitmask |= (valid as u128) << offset;
+                    moves_validity_bitfield |= (valid as u128) << offset;
                 }
             }
 
-            moves_validity_bitmask
+            moves_validity_bitfield
         }
         
     }
@@ -513,6 +513,34 @@ impl Board {
         }
 
         cells
+    }
+}
+
+pub struct ValidMoveIterator {
+    bitfield: u128,
+}
+
+impl ValidMoveIterator {
+    pub fn new(bitfield: u128) -> Self {
+        Self { bitfield }
+    }
+}
+
+impl Iterator for ValidMoveIterator {
+    type Item = (u8, u8); 
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.bitfield == 0 {
+            return None;
+        }
+
+        let offset = self.bitfield.trailing_zeros() as u8;
+        if offset >= 81 {
+            return None;
+        }
+
+        self.bitfield ^= 1 << offset;
+        Some((offset / 9, offset % 9))
     }
 }
 
