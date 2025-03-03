@@ -60,6 +60,8 @@ mod tests {
         board.set_status_of(uncontestable_corresponding_miniboard, flag::STATUS_X_WIN);
         board.set_status_of(uncontestable_miniboard, flag::STATUS_X_WIN);
 
+        let validcells = board.valid_moves_bitfield();
+        //println!("validmask = {validmask:b}");
 
         for row in 0..9 {
             for column in 0..9 {
@@ -70,10 +72,16 @@ mod tests {
                 || move_miniboard == uncontestable_corresponding_miniboard
                 {
                     assert!(!board.is_valid_move(row, column), "{row} {column} was valid but shouldn't be");
+                    let pos = column + row * 9;
+                    let validcell = validcells >> pos & 1;
+                    assert!(validcell == 0, "{row} {column} at {pos} was valid but shouldn't be");
                     continue;
                 }
 
                 assert!(board.is_valid_move(row, column), "{row} {column} was invalid but should be valid");
+                let pos = column + row * 9;
+                let isvalidcell = validcells >> pos & 1;
+                assert!(isvalidcell == 1, "{row} {column} at {pos} was valid but should be valid");
             }
         }
 
