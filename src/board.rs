@@ -306,6 +306,43 @@ impl Board {
         true
     }
 
+    /// Generates a bitmask from the valid moves on the miniboards
+    /// `1` == valid and `0` == invalid
+    pub fn valid_moves_bitfield(&self) -> u128 {
+        let mut moves_validity_bitmask = 0u128;
+
+        // if corresponding is uncontestable, we fully validate the whole board
+        // otherwise, we check for valid moves only in the corresponding miniboard;
+        // full
+        let (last_row, last_column) = self.last_move;
+        let corresponding_mb = Self::move_corresponding_miniboard(last_row, last_column);
+        if self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE {
+            // TODO: could directly check for cell == empty and first move of the game exception for
+            // faster eval?
+            let (starting_row, starting_column) = (corresponding_mb / 3 * 3, corresponding_mb % 3 * 3);
+            for row in starting_row..starting_row + 3 {
+                for column in starting_column..starting_column + 3 {
+                    let valid = self.is_valid_move(row, column);
+                    let offset = column + row * 9;
+                    moves_validity_bitmask |= (valid as u128) << offset;
+                }
+            }
+
+            moves_validity_bitmask
+        } else {
+           for row in 0..9 {
+                for column in 0..9 {
+                    let valid = self.is_valid_move(row, column);
+                    let offset = column + row * 9;
+                    moves_validity_bitmask |= (valid as u128) << offset;
+                }
+            }
+
+            moves_validity_bitmask
+        }
+        
+    }
+
     pub fn reset(&mut self) {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
