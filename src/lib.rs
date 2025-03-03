@@ -3,7 +3,7 @@ pub mod ai;
 
 #[cfg(test)]
 mod tests {
-    use crate::board::{flag, Board};
+    use crate::board::{flag, Board, ValidMoveIterator};
     use crate::ai::AI;
 
     #[test]
@@ -410,5 +410,25 @@ mod tests {
         board.calculate_game_status();
         assert_eq!(board.get_miniboard_win_count_of(2), 2);
 
+    }
+
+    #[test]
+    fn valid_move_iter() {
+        let mut board = Board::new();
+
+        let bitfield = board.valid_moves_bitfield();
+        let valid = ValidMoveIterator::new(bitfield);
+        println!("{bitfield}");
+        for (row, col) in valid {
+            println!("{row} {col} is valid");
+        }
+
+        board.do_move(4, 4, 1);
+        let bitfield = board.valid_moves_bitfield();
+        let valid = ValidMoveIterator::new(bitfield);
+        println!("{bitfield}");
+        for (row, col) in valid {
+            println!("{row} {col} is valid");
+        }
     }
 }
