@@ -306,22 +306,30 @@ mod tests {
     #[test]
     fn get_game_status() {
         let mut board = Board::new();
+        let mut ai = AI::default();
 
         // x win -- miniboards 3, 4, 5 
         board.do_move(3, 0, 1);
         board.do_move(3, 1, 1);
         board.do_move(3, 2, 1);
+        board.calculate_miniboard_status(3);
         assert_eq!(board.calculate_game_status(), flag::STATUS_CONTESTABLE);
+        ai.evaluate(&board);
 
         board.do_move(3, 4, 1);
         board.do_move(4, 4, 1);
         board.do_move(5, 4, 1);
+        board.calculate_miniboard_status(4);
+        ai.evaluate(&board);
 
         board.do_move(3, 6, 1);
         board.do_move(4, 7, 1);
         board.do_move(5, 8, 1);
+        board.calculate_miniboard_status(5);
+        ai.evaluate(&board);
 
         let gamestatus = board.calculate_game_status();
+        ai.evaluate(&board);
         assert_eq!(gamestatus, flag::STATUS_X_WIN);
 
         board.do_move(5, 7, 2);
@@ -336,10 +344,12 @@ mod tests {
         board.do_move(2, 6, 2);
         board.do_move(2, 7, 2);
         board.do_move(2, 8, 2);
+        board.calculate_game_status();
 
         board.do_move(3, 6, 2);
         board.do_move(3, 7, 2);
         board.do_move(3, 8, 2);
+        board.calculate_game_status();
 
         board.do_move(7, 6, 2);
         board.do_move(7, 7, 2);
@@ -402,6 +412,7 @@ mod tests {
         board.do_move(4, 3, 2);
         board.do_move(4, 4, 2);
         board.do_move(4, 5, 2);
+        board.calculate_game_status();
 
         board.do_move(3, 0, 2);
         board.do_move(4, 0, 2);

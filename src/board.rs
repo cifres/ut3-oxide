@@ -70,7 +70,7 @@ const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
     winning_lines
 }
 
-const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines(); 
+pub const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines(); 
 
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
@@ -119,6 +119,8 @@ impl Board {
     /* Cell Operations */
     #[inline(always)]
     pub const fn get_cell(&self, row: u8, column: u8) -> u8 {
+        assert!(row < 9);
+        assert!(column < 9);
         let offset = column * 2;
         let mask = 0b11 << offset;
 
@@ -126,7 +128,9 @@ impl Board {
     }
 
     #[inline(always)]
-    pub const fn set_cell(&mut self, row: u8, column: u8, player: u8) {
+    pub const fn set_cell(&mut self, row: u8, column: u8, value: u8) {
+        assert!(row < 9);
+        assert!(column < 9);
         // clear bits
         let row = row as usize;
         let offset = column * 2;
@@ -134,7 +138,7 @@ impl Board {
         self.main_board[row] &= !(mask as u32); 
         
         // set bits
-        let mask = (player as u32) << offset;
+        let mask = (value as u32) << offset;
         self.main_board[row] |= mask;
     }
 
@@ -407,9 +411,8 @@ impl Board {
             // Short-circuit and return early if a winning line is matched
             if status > flag::STATUS_CONTESTABLE {
                 //println!("calc {miniboard} as {}", self.get_status_of(miniboard));
-                let player = status;
-                let xo_mbwincount = self.get_miniboard_win_count_of(player);
-                self.set_miniboard_win_count_of(player, xo_mbwincount + 1);
+                let xo_mbwincount = self.get_miniboard_win_count_of(last_player);
+                self.set_miniboard_win_count_of(last_player, xo_mbwincount + 1);
 
                 return true;
             }
@@ -446,8 +449,12 @@ impl Board {
         // and they've won more than 2 miniboards 
         // then check for board winning lines intersecting that miniboard
         // otherwise, exit because the game's state cannot change 
-        let xo_mbwincount = self.get_miniboard_win_count_of(last_player);
-        if !status_changed && status != last_player && xo_mbwincount > 2 {
+        //if !status_changed
+        //    && status != last_player    // i.e. contestable or drawn -- cannot be opponent player
+        //    && self.get_miniboard_win_count_of(last_player) < 3 
+        // TODO: a drawn miniboard should trigger game draw checking
+        // otherwise, winning a miniboard but having less than 3 wins is still an early exit 
+        if !status_changed && status != flag::STATUS_DRAW {
             return flag::STATUS_CONTESTABLE;
         }
 
@@ -465,7 +472,9 @@ impl Board {
             let mut xoline = 0u32;
             for &(row, column) in line {
                 let miniboard = column + row * 3;
-                let _ = self.calculate_miniboard_status(miniboard);
+                // might be only required during testing because after every move, the miniboard a
+                // move is made in is checked/calculated at the start of this function
+                let _ = self.calculate_miniboard_status(miniboard);                     
                 let status = self.get_status_of(miniboard);
                 //println!("{status}");
                 
@@ -481,6 +490,7 @@ impl Board {
         }
 
         // draw checking -- 1 contestable board suffices as a contestable game technically
+        // todo? put into bitfield and call .trailing_zeros for efficiency
         for miniboard in 0..self.main_board.len() as u8 {
             let status = self.get_status_of(miniboard);
             if status == flag::STATUS_CONTESTABLE {
@@ -492,7 +502,8 @@ impl Board {
         flag::STATUS_DRAW
     }
 
-    /// Returns a miniboard's cells in;
+    /// Offsets a cell by `(row * 3 + column) * 2`
+    /// Returns a miniboard's cells as u32
     pub fn get_miniboard_cells(&self, miniboard: u8) -> u32  {
         assert!(miniboard < 9);
 
