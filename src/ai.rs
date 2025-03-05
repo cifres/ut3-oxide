@@ -1,4 +1,4 @@
-use crate::board::{Board, flag, WINNING_LINES};
+use crate::board::{Board, flag, WINNING_LINES, ValidMoveIterator};
 
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT: i16 = 10;
@@ -22,15 +22,60 @@ impl Default for AI {
 #[allow(dead_code)]
 impl AI {
     pub fn new(ai_shape: u8) -> Self {
-        println!("Ai created as {ai_shape}");
+        //println!("Ai created as {ai_shape}");
         let opponent_shape = if ai_shape == flag::O_PLAYER { flag::X_PLAYER } else { flag::O_PLAYER };
         Self { ai_shape, opponent_shape }
     }
 
-    pub fn calculate_move(board: &Board) -> (u8, u8) {
-        let status = board.calculate_game_status(); 
-        println!("status from ai: {status}");
-        todo!()
+    pub fn calculate_move(&self, board: &Board, depth: u8) -> (u8, u8) {
+        
+        const DEPTH: u8 = 6;
+        let depth = depth.max(DEPTH);
+
+        let mut best_move = (0, 0);
+        let mut best_score = i16::MIN;
+        for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+            let mut board = board.clone();
+            board.do_move(row, column, self.ai_shape);
+            let score = self.alphabeta_mm(&mut board, depth - 1, false);
+            // undo move instead of clone
+            best_move = if score > best_score {
+                best_score = score;
+                (row, column)
+            } else {
+               best_move 
+            }; 
+
+            println!("move {:?} with score {score}", (row, column));
+        }
+
+        println!("best {best_move:?} score {best_score} at depth {DEPTH}");
+        best_move
+    }
+
+    fn alphabeta_mm(&self, board: &mut Board, depth: u8, is_max: bool) -> i16 {
+        
+        if depth == 0 || board.calculate_game_status() != flag::STATUS_CONTESTABLE {
+            return self.evaluate(board);
+        }
+
+        if is_max {
+            let mut score = i16::MIN;
+            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+                let mut board = board.clone();
+                board.do_move(row, column, self.ai_shape);
+                score = score.max(self.alphabeta_mm(&mut board, depth - 1, false))
+            }
+            score
+        } else {
+            let mut score = i16::MAX;
+            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+                let mut board = board.clone();
+                board.do_move(row, column, self.opponent_shape);
+                score = score.min(self.alphabeta_mm(&mut board, depth - 1, true))
+            }
+            score
+        }
     }
 
     /// Winning = `i16::MAX`, Drawing = 0, Losing = `i16::MIN`
@@ -57,14 +102,14 @@ impl AI {
                - (board.get_miniboard_win_count_of(self.opponent_shape)) as i16)
                * SCORE_UNIT * MINIBOARD_WIN_COUNT;
 
-        println!("@ mbs won {score}");
+        //println!("@ mbs won {score}");
         // centre-control: board-wide and in individual miniboards
         let centre_status = board.get_status_of(4);
         score += (((centre_status == self.ai_shape) as i16) 
                - ((centre_status == self.opponent_shape) as i16))
                * SCORE_UNIT * CENTRE_MB_CONTROL;
 
-        println!("@ centre mb {score}");
+        //println!("@ centre mb {score}");
 
         // crude individual miniboard check
         // todo create bitmask of combined miniboards?
@@ -79,7 +124,7 @@ impl AI {
                    * SCORE_UNIT * CENTRE_CELL_CONTROL;
         }
 
-        println!("@ centre cell {score}");
+        //println!("@ centre cell {score}");
 
         //TODO lines: continuous, unconnected  for cells of miniboards, and miniboards of the game
         // continuous pattern strong for 2:  normal winning line: 10 10 10 -> 10 10 [00] OR [00] 10 10 
@@ -140,7 +185,7 @@ impl AI {
             //println!("{pattern:016b} {pattern_ai:016b} {score} con {ai_continous} unconn {ai_unconnected} {line:?}");
         }
 
-        println!("@ continuous/unconnected mb lines {score}");
+        //println!("@ continuous/unconnected mb lines {score}");
 
         // win/lose -- find way to not need to clone board -- must not use &mut board ideally
         let game_status = board.calculate_game_status();
@@ -150,18 +195,31 @@ impl AI {
             score = i16::MAX;
         }
 
-        println!("final {score}");
+        //println!("final {score}");
 
         score
     }
-
-    fn alphabeta_mm(board: &Board, depth: u8) -> (u8, u8) {
-        // default 6
-        let depth = if depth > 0 { depth } else { 6 };
-        todo!()
-    }
 }
 
+    //function alphabeta(node, depth, α, β, maximizingPlayer) is
+    //    if depth == 0 or node is terminal then
+    //        return the heuristic value of node
+    //    if maximizingPlayer then
+    //        value := −∞
+    //        for each child of node do
+    //            value := max(value, alphabeta(child, depth − 1, α, β, FALSE))
+    //            α := max(α, value)
+    //            if value ≥ β then
+    //                break (* β cutoff *)
+    //        return value
+    //    else
+    //        value := +∞
+    //        for each child of node do
+    //            value := min(value, alphabeta(child, depth − 1, α, β, TRUE))
+    //            β := min(β, value)
+    //            if value ≤ α then
+    //                break (* α cutoff *)
+    //        return value
 #[test]
 fn ai_evaluate() {
     let ai = AI::default();
@@ -257,4 +315,10 @@ fn ai_evaluate() {
 
 #[test]
 fn ai_minimax() {
+    let mut board = Board::new();
+    let ai = AI::default();
+    
+    board.do_move(2, 4, 1);
+    let aimove = ai.calculate_move(&board, 8);
+    println!("{aimove:?}");
 }
