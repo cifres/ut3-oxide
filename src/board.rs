@@ -385,7 +385,7 @@ impl Board {
 
         // cheap check that guarentees there's a winning line without needing to check
         if player_move_count > 6 {
-            println!("YES MOVE COUNT {player_move_count}");
+            //println!("YES MOVE COUNT {player_move_count}");
             self.set_status_of(miniboard, last_player);
             return true;
         }
@@ -451,7 +451,7 @@ impl Board {
     pub fn calculate_game_status(&self) -> u8 {
         let (row, column) = self.last_move;
         let last_player = self.get_cell(row, column);
-        println!("\n{last_player}");
+        //println!("\n{last_player}");
         let last_miniboard = Self::move_miniboard(row, column);
         let mb_status = self.get_status_of(last_miniboard);
 
@@ -557,6 +557,7 @@ impl Iterator for ValidMoveIterator {
             return None;
         }
 
+        // clear the bit and return the move (row, col)
         self.bitfield ^= 1 << offset;
         Some((offset / 9, offset % 9))
     }
