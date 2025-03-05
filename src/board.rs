@@ -577,14 +577,14 @@ impl fmt::Display for Board {
             for row in 0..9 {
                 for column in 0..9 { 
                     let cell = self.get_cell(row, column);
-                    write!(f, "{row},{column} ")?;
+                    //write!(f, "{row},{column} ")?;
                     //write!(f, "{:01} ", column + (row * 3) * 3)?;
                     if cell == 1 {
-                        //write!(f, "X ")?;
+                        write!(f, "X ")?;
                     } else if cell == 2 {
-                        //write!(f, "O ")?;
+                        write!(f, "O ")?;
                     } else {
-                        //write!(f, "_ ")?;
+                        write!(f, "_ ")?;
                     }
                     if (column + 1) % 3 == 0 {
                         write!(f, "| ")?;
