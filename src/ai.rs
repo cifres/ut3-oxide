@@ -34,20 +34,18 @@ impl AI {
         const DEPTH: u8 = 6;
         let depth = depth.max(DEPTH);
 
-        let mut best_move = (0, 0);
-        let mut best_score = i16::MIN;
-
         let valid_move_iterator = ValidMoveIterator::new(board.valid_moves_bitfield());
         let bstmv = valid_move_iterator.par_bridge().map(|(row, column)| {
             let mut board = board.clone();
             board.do_move(row, column, self.ai_shape);
-            let score = self.alphabeta_mm(&mut board, depth - 1, false);
-            println!("{score} {row}, {column}");
+            //let score = self.minimax(&mut board.clone(), depth - 1, false);
+            let score = self.alphabeta_mm(&mut board.clone(), depth - 1, i16::MIN, i16::MAX, false);
+            //println!("{score} {row}, {column}");
             // undo move instead of clone
             (score, (row, column))
         }).max_by_key(|(score, (_, _))| *score);
 
-        println!("{bstmv:?}");
+        //println!("{bstmv:?}");
         //println!("best {best_move:?} score {best_score} at depth {DEPTH}");
         bstmv.expect("a move should've been selected").1
     }
@@ -62,7 +60,7 @@ impl AI {
         for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
             let mut board = board.clone();
             board.do_move(row, column, self.ai_shape);
-            let score = self.alphabeta_mm(&mut board, depth - 1, false);
+            let score = self.minimax(&mut board, depth - 1, false);
             // undo move instead of clone
             best_move = if score > best_score {
                 best_score = score;
@@ -78,7 +76,7 @@ impl AI {
         best_move
     }
 
-    fn alphabeta_mm(&self, board: &mut Board, depth: u8, is_max: bool) -> i16 {
+    fn alphabeta_mm(&self, board: &mut Board, depth: u8, mut alpha: i16, mut beta: i16, is_max: bool) -> i16 {
         
         if depth == 0 || board.calculate_game_status() != flag::STATUS_CONTESTABLE {
             return self.evaluate(board);
@@ -89,7 +87,11 @@ impl AI {
             for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
                 let mut board = board.clone();
                 board.do_move(row, column, self.ai_shape);
-                score = score.max(self.alphabeta_mm(&mut board, depth - 1, false))
+                score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
+                alpha = alpha.max(score);
+                if score >= beta {
+                    break;
+                }
             }
             score
         } else {
@@ -97,7 +99,36 @@ impl AI {
             for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
                 let mut board = board.clone();
                 board.do_move(row, column, self.opponent_shape);
-                score = score.min(self.alphabeta_mm(&mut board, depth - 1, true))
+                score = score.min(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, true));
+                beta = beta.min(score);
+                if score <= alpha {
+                    break;
+                }
+            }
+            score
+        }
+    }
+
+    fn minimax(&self, board: &mut Board, depth: u8, is_max: bool) -> i16 {
+        
+        if depth == 0 || board.calculate_game_status() != flag::STATUS_CONTESTABLE {
+            return self.evaluate(board);
+        }
+
+        if is_max {
+            let mut score = i16::MIN;
+            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+                let mut board = board.clone();
+                board.do_move(row, column, self.ai_shape);
+                score = score.max(self.minimax(&mut board, depth - 1, false))
+            }
+            score
+        } else {
+            let mut score = i16::MAX;
+            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+                let mut board = board.clone();
+                board.do_move(row, column, self.opponent_shape);
+                score = score.min(self.minimax(&mut board, depth - 1, true))
             }
             score
         }
