@@ -1,5 +1,4 @@
 use crate::board::{Board, flag, WINNING_LINES};
-use std::iter::zip;
 
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT: i16 = 10;
@@ -29,7 +28,6 @@ impl AI {
     }
 
     pub fn calculate_move(board: &Board) -> (u8, u8) {
-        let mut board = board.clone();
         let status = board.calculate_game_status(); 
         println!("status from ai: {status}");
         todo!()
@@ -93,7 +91,7 @@ impl AI {
 
         // TODO: 
         // todo: do cells of every miniboard 
-        // systematic error: recounts miniboards in the other direction
+        // implicitly biases corners and centre miniboard due to increased intersectionability
         for line in WINNING_LINES {
             let broken_items = [line[0], line[2]];
             let broken_line = broken_items.iter();
@@ -145,8 +143,7 @@ impl AI {
         println!("@ continuous/unconnected mb lines {score}");
 
         // win/lose -- find way to not need to clone board -- must not use &mut board ideally
-        let mut newboard = board.clone();
-        let game_status = newboard.calculate_game_status();
+        let game_status = board.calculate_game_status();
         if game_status == self.opponent_shape {
             score = i16::MIN;
         } else if game_status == self.ai_shape {
@@ -158,7 +155,7 @@ impl AI {
         score
     }
 
-    fn minimax(board: &Board, depth: u8) -> (u8, u8) {
+    fn alphabeta_mm(board: &Board, depth: u8) -> (u8, u8) {
         // default 6
         let depth = if depth > 0 { depth } else { 6 };
         todo!()

@@ -240,9 +240,11 @@ impl Board {
 
         let miniboard = Self::move_miniboard(row, column);
         let move_count = self.get_player_move_count_in(miniboard, player);
-        self.set_move_count_of(miniboard, move_count + 1, player);
-
         assert!(move_count <= 9);
+
+        self.set_move_count_of(miniboard, move_count + 1, player);
+        self.calculate_miniboard_status(miniboard);
+
     }
 
     /// Returns the miniboard that move is in
@@ -310,6 +312,7 @@ impl Board {
         true
     }
 
+    // TODO: order moves by importance?
     /// Generates a bitfield from the valid moves on the miniboards
     /// `1` == valid and `0` == invalid
     pub fn valid_moves_bitfield(&self) -> u128 {
@@ -371,10 +374,20 @@ impl Board {
         assert_ne!(last_player, flag::EMPTY);
 
         // early exit miniboards that cannot be won/lost/drawn yet.
-        if self.get_player_move_count_in(miniboard, last_player) < 3 {
+        // equivalent to get_total_move_count_of < 3 but more accurate because it's impossible to
+        // not win a miniboard if player move count > 6
+        let player_move_count = self.get_player_move_count_in(miniboard, last_player);
+        if player_move_count < 3 {
             //println!("nocalc cached {miniboard} as state {} -- movecount < 3 for {last_player}", self.get_status_of(miniboard));
             debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
             return false;
+        }
+
+        // cheap check that guarentees there's a winning line without needing to check
+        if player_move_count > 6 {
+            println!("YES MOVE COUNT {player_move_count}");
+            self.set_status_of(miniboard, last_player);
+            return true;
         }
 
         // movecount == 9 drawn
@@ -382,7 +395,6 @@ impl Board {
         // E.g. match row pattern to 101010 (2, 2, 2) -> 42 
         // or 010101 (1, 1, 1) -> 21 for O and X win respectively  
         let cells = self.get_miniboard_cells(miniboard);
-
         for line in WINNING_LINES {
             //println!("{line:?}");
             let mut line_mask = 0u32;
@@ -436,36 +448,30 @@ impl Board {
     // Compare against last player's move only for masking 
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
-    pub fn calculate_game_status(&mut self) -> u8 {
-        // Get miniboard statuses in a winning line of the last_move's miniboard
+    pub fn calculate_game_status(&self) -> u8 {
         let (row, column) = self.last_move;
         let last_player = self.get_cell(row, column);
         println!("\n{last_player}");
-        let miniboard = Self::move_miniboard(row, column);
-        let status_changed = self.calculate_miniboard_status(miniboard);
-        let status = self.get_status_of(miniboard);
+        let last_miniboard = Self::move_miniboard(row, column);
+        let mb_status = self.get_status_of(last_miniboard);
 
         // If the miniboard's status is won by the last move that was just made
-        // and they've won more than 2 miniboards 
         // then check for board winning lines intersecting that miniboard
         // otherwise, exit because the game's state cannot change 
-        //if !status_changed
-        //    && status != last_player    // i.e. contestable or drawn -- cannot be opponent player
-        //    && self.get_miniboard_win_count_of(last_player) < 3 
-        // TODO: a drawn miniboard should trigger game draw checking
-        // otherwise, winning a miniboard but having less than 3 wins is still an early exit 
-        if !status_changed && status != flag::STATUS_DRAW {
+        
+        // maybe todo?: if we just won/drew one and we've won less than 3, and there are other
+        // contestable miniboards, then it's still contestable
+        if mb_status == flag::STATUS_CONTESTABLE {
             return flag::STATUS_CONTESTABLE;
         }
 
-        // in a winning line...
+        // cheap check because it's logically impossible to not win if you win 7 miniboards
+        if self.get_miniboard_win_count_of(last_player) > 6 {
+            return last_player;
+        }
         // get winning lines intersecting with the last move's miniboard
-        let coords = (miniboard / 3, miniboard % 3);
-        let potential_lines = WINNING_LINES
-            .iter()
-            .filter(|line| line.contains(&coords))
-            .collect::<Vec<_>>();
-        //println!("{potential_lines:?}");
+        let last_mb_coords = (last_miniboard / 3, last_miniboard % 3);
+        let potential_lines = WINNING_LINES.iter().filter(|line| line.contains(&last_mb_coords));
 
         for line in potential_lines {
             let mut statusbits = 0u32;
@@ -474,7 +480,7 @@ impl Board {
                 let miniboard = column + row * 3;
                 // might be only required during testing because after every move, the miniboard a
                 // move is made in is checked/calculated at the start of this function
-                let _ = self.calculate_miniboard_status(miniboard);                     
+                //let _ = self.calculate_miniboard_status(miniboard);                     
                 let status = self.get_status_of(miniboard);
                 //println!("{status}");
                 
@@ -490,8 +496,9 @@ impl Board {
         }
 
         // draw checking -- 1 contestable board suffices as a contestable game technically
-        // todo? put into bitfield and call .trailing_zeros for efficiency
-        for miniboard in 0..self.main_board.len() as u8 {
+        // TODO: put miniboard statuses into bitfield and call .trailing_zeros for efficiency
+        // also useful for ai
+        for miniboard in 0..9  {
             let status = self.get_status_of(miniboard);
             if status == flag::STATUS_CONTESTABLE {
                 return flag::STATUS_CONTESTABLE;

@@ -301,6 +301,22 @@ mod tests {
         assert_eq!(board.get_status_of(miniboard), flag::STATUS_X_WIN);
         board.reset();
 
+        /* move count > 6 == win test */
+        board.do_move(0, 0, 1);
+        board.do_move(0, 1, 1);
+        board.do_move(1, 0, 1);
+
+        board.do_move(1, 2, 1);
+        board.do_move(2, 1, 1);
+        board.do_move(2, 2, 1);
+
+        // player 2 makes a move but it makes no difference
+        board.do_move(1, 1, 2);
+
+        board.do_move(0, 2, 1);
+        assert_eq!(board.get_player_move_count_in(0, flag::X_PLAYER), 7);
+        assert_eq!(board.get_status_of(0), flag::STATUS_X_WIN);
+
     }
 
     #[test]
@@ -387,9 +403,23 @@ mod tests {
         board.set_status_of(7, flag::STATUS_DRAW);
         board.set_status_of(8, flag::STATUS_O_WIN);
 
+        board.set_miniboard_win_count_of(flag::O_PLAYER, 4);
         board.do_move(4, 4, 2);
         assert!(board.calculate_miniboard_status(4));
         assert_ne!(board.get_status_of(4), flag::STATUS_CONTESTABLE);
+        assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
+
+        // almost/fully drawn
+        board.reset();
+        for miniboard in 0..9 {
+            board.set_status_of(miniboard, flag::STATUS_DRAW);
+        }
+        board.do_move(8, 8, 1);
+        assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
+
+        // almost
+        board.set_status_of(8, flag::STATUS_X_WIN);
+        board.set_miniboard_win_count_of(flag::X_PLAYER, 1);
         assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
     }
 
