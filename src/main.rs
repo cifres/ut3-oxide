@@ -10,6 +10,11 @@ fn main() {
     let ai = AI::default();
     
     board.do_move(2, 4, 1);
-    let aimove = ai.calculate_move(&board, 7);
+    let aimove = ai.calculate_move_par(&board, 7);
     println!("{aimove:?}");
+}
+
+
+fn ask_move() {
+    
 }

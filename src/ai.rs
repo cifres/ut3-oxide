@@ -1,3 +1,5 @@
+use rayon::iter::{IntoParallelIterator, ParallelBridge, ParallelIterator};
+
 use crate::board::{Board, flag, WINNING_LINES, ValidMoveIterator};
 
 // basic multiplier and weight adjustment for what is valued
@@ -25,6 +27,29 @@ impl AI {
         //println!("Ai created as {ai_shape}");
         let opponent_shape = if ai_shape == flag::O_PLAYER { flag::X_PLAYER } else { flag::O_PLAYER };
         Self { ai_shape, opponent_shape }
+    }
+
+    pub fn calculate_move_par(&self, board: &Board, depth: u8) -> (u8, u8) {
+        
+        const DEPTH: u8 = 6;
+        let depth = depth.max(DEPTH);
+
+        let mut best_move = (0, 0);
+        let mut best_score = i16::MIN;
+
+        let valid_move_iterator = ValidMoveIterator::new(board.valid_moves_bitfield());
+        let bstmv = valid_move_iterator.par_bridge().map(|(row, column)| {
+            let mut board = board.clone();
+            board.do_move(row, column, self.ai_shape);
+            let score = self.alphabeta_mm(&mut board, depth - 1, false);
+            println!("{score} {row}, {column}");
+            // undo move instead of clone
+            (score, (row, column))
+        }).max_by_key(|(score, (_, _))| *score);
+
+        println!("{bstmv:?}");
+        //println!("best {best_move:?} score {best_score} at depth {DEPTH}");
+        bstmv.expect("a move should've been selected").1
     }
 
     pub fn calculate_move(&self, board: &Board, depth: u8) -> (u8, u8) {
@@ -89,7 +114,6 @@ impl AI {
     ///     * interrupted/broken relative +/- 7 
     ///
     /// Returns the evaluation of the board state 
-    #[no_mangle]
     pub fn evaluate(&self, board: &Board) -> i16 {
         // should the main board produce and return miniboard statuses or the AI?
         // for aishape won miniboards += score_mult
