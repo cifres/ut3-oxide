@@ -7,8 +7,11 @@ const SCORE_UNIT: i16 = 10;
 const CENTRE_CELL_CONTROL: i16 = 1;
 const MINIBOARD_WIN_COUNT: i16 = 4;
 const CENTRE_MB_CONTROL: i16 = 5;
-const NEAR_WON_LINES: i16 = 1;
+const NEAR_WON_LINES: i16 = 2;
+const NEAR_WON_MB_LINES: i16 = 1;
 const UNCONESTABLE_MB_POINTING: i16 = 2;
+
+const DEPTH: u8 = 6;
 
 // representing continuous, and broken line patterns
 const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
@@ -56,8 +59,8 @@ impl AI {
     }
 
     pub fn calculate_move_par(&self, board: &Board, depth: u8) -> (u8, u8) {
-        const DEPTH: u8 = 6;
-        let depth = depth.max(DEPTH);
+        // let depth = depth.max(DEPTH);
+        let depth = if depth > 0 { depth } else { DEPTH };
 
         let valid_move_iterator = ValidMoveIterator::new(board.valid_moves_bitfield());
         let bstmv = valid_move_iterator
@@ -175,6 +178,45 @@ impl AI {
         for miniboard in 0..9 {
             if board.get_total_move_count_of(miniboard) > 0 {
                 let cells = board.get_miniboard_cells(miniboard);
+
+                // continuous_line/broken line patterns within miniboards
+                for line in LINE_PATTERNS {
+                    let mut pattern = 0u16;
+                    let mut pattern_ai = 0u16;
+                    let mut pattern_opp = 0u16;
+                    // TODO: extract into resuable function which compares a u16 of 4 bit groups * 3
+                    // patterns to ai/opponent patterns
+                    for (i, (row, column)) in line.iter().enumerate() {
+                        let offset = (column + row * 3) * 2;
+                        let mask = 0b11 << offset;
+                        let cell = ((cells & mask) >> offset) as u8;
+
+                        let normalised_offset = i * 2;
+                        pattern |= (cell as u16) << normalised_offset;
+                        pattern_ai |= (self.ai_shape as u16) << normalised_offset;
+                        pattern_opp |= (self.opponent_shape as u16) << normalised_offset;
+                    }
+
+                    let ai_continous = (pattern_ai & 0b1111 == pattern & 0b1111
+                        || pattern_ai & (0b1111 << 4) == pattern & (0b1111 << 4))
+                        as i16;
+
+                    let opp_continous = (pattern_opp & 0b1111 == pattern & 0b1111
+                        || pattern_opp & (0b1111 << 4) == pattern & (0b1111 << 4))
+                        as i16;
+
+                    let ai_unconnected =
+                        ((pattern_ai & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
+                    let opp_unconnected =
+                        ((pattern_opp & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
+
+                    // todo reward continuous_line for ai
+                    score += ((ai_continous + ai_unconnected) - (opp_continous + opp_unconnected))
+                        * SCORE_UNIT
+                        * NEAR_WON_MB_LINES;
+                }
+
+                // point to uncontestable miniboards?
                 for row in 0..3 {
                     for column in 0..3 {
                         // get non empty cells and get the status of their corresponding miniboard
@@ -221,7 +263,6 @@ impl AI {
                 let status = board.get_status_of(miniboard);
 
                 let normalised_offset = i * 2;
-                //println!("{i} -> {offset} - {row} {column} -- {status:02b}");
                 pattern |= (status as u16) << normalised_offset;
                 pattern_ai |= (self.ai_shape as u16) << normalised_offset;
                 pattern_opp |= (self.opponent_shape as u16) << normalised_offset;
@@ -279,6 +320,7 @@ fn ai_evaluate() {
         SCORE_UNIT * CENTRE_MB_CONTROL
             + SCORE_UNIT * CENTRE_CELL_CONTROL
             + SCORE_UNIT * MINIBOARD_WIN_COUNT
+            + SCORE_UNIT * NEAR_WON_MB_LINES * 2
             - SCORE_UNIT * UNCONESTABLE_MB_POINTING
     );
     board.reset();
@@ -294,6 +336,7 @@ fn ai_evaluate() {
         -SCORE_UNIT * CENTRE_MB_CONTROL
             - SCORE_UNIT * CENTRE_CELL_CONTROL
             - SCORE_UNIT * MINIBOARD_WIN_COUNT
+            - SCORE_UNIT * NEAR_WON_MB_LINES * 2
             + SCORE_UNIT * UNCONESTABLE_MB_POINTING
     );
     board.reset();
@@ -315,12 +358,14 @@ fn ai_evaluate() {
 
     let ai_mbs_won = 2;
     let opp_mbs_won = 1;
+    let net_near_won_mb_lines = 4 - 2;
 
     let _ = board.calculate_game_status();
     let score = ai.evaluate(&board);
     assert_eq!(
         score,
-        ((ai_mbs_won - opp_mbs_won) * SCORE_UNIT * MINIBOARD_WIN_COUNT)
+        ((ai_mbs_won - opp_mbs_won) * SCORE_UNIT * MINIBOARD_WIN_COUNT
+            + SCORE_UNIT * NEAR_WON_MB_LINES * net_near_won_mb_lines)
     );
 
     board.reset();

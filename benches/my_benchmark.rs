@@ -29,7 +29,6 @@ fn winrate_benchmark(c: &mut Criterion) {
 
     group.bench_function("single-call-performance", |b| {
         b.iter(|| {
-            // black_box(ai.calculate_move_par(&board, 6));
             ai.calculate_move_par(&board, 6);
         });
     });
@@ -43,12 +42,13 @@ fn winrate_benchmark(c: &mut Criterion) {
     let mut wins = 0u16;
     let mut draws = 0u16;
     let mut loses = 0u16;
-    let duration = std::time::Duration::from_secs(9);
+    let duration = std::time::Duration::from_secs(17);
 
-    group.sample_size(10).measurement_time(duration);
+    // group.sample_size(10).measurement_time(duration);
+    group.measurement_time(duration);
     group.bench_function("winrate", |b| {
         b.iter(|| {
-            for _ in 0..iterations {
+            // for _ in 0..iterations {
                 let status = ai_playout();
                 if status == flag::O_PLAYER {
                     wins += 1;
@@ -57,7 +57,8 @@ fn winrate_benchmark(c: &mut Criterion) {
                 } else if status == flag::X_PLAYER {
                     loses += 1;
                 }
-            }
+            // }
+        status
         });
     });
 
