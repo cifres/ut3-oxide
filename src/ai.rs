@@ -5,29 +5,26 @@ use crate::board::{flag, Board, ValidMoveIterator, WINNING_LINES};
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT: i16 = 10;
 const CENTRE_CELL_CONTROL: i16 = 1;
-const MINIBOARD_WIN_COUNT: i16 = 2;
-const CENTRE_MB_CONTROL: i16 = 3;
-const NEAR_WON_LINES: i16 = 2;
+const MINIBOARD_WIN_COUNT: i16 = 4;
+const CENTRE_MB_CONTROL: i16 = 5;
+const NEAR_WON_LINES: i16 = 1;
+const UNCONESTABLE_MB_POINTING: i16 = 2;
 
-// representing continuous, and broken line patterns 
-const LINE_PATTERNS: [[(u8, u8); 6]; 8]  = const {
+// representing continuous, and broken line patterns
+const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
     let mut i = 0;
     // continuous is a 3-in-a-row split up
     // so miniboards [0, 1, 2] become [0, 1] [1, 2]
-    let mut combined =  [[(0, 0); 6]; 8];
+    let mut combined = [[(0, 0); 6]; 8];
 
     while i < WINNING_LINES.len() {
         let wline = WINNING_LINES[i];
 
-        combined[i] = [
-            wline[0], wline[1],
-            wline[1], wline[2],
-            wline[0], wline[2],
-        ];
+        combined[i] = [wline[0], wline[1], wline[1], wline[2], wline[0], wline[2]];
 
         i += 1;
     }
-    
+
     combined
 };
 
@@ -43,7 +40,7 @@ impl Default for AI {
     }
 }
 
-#[allow(dead_code)]
+// #[allow(dead_code)]
 impl AI {
     pub fn new(ai_shape: u8) -> Self {
         //println!("Ai created as {ai_shape}");
@@ -68,9 +65,7 @@ impl AI {
             .map(|(row, column)| {
                 let mut board = board.clone();
                 board.do_move(row, column, self.ai_shape);
-                //let score = self.minimax(&mut board.clone(), depth - 1, false);
-                let score =
-                    self.alphabeta_mm(&mut board.clone(), depth - 1, i16::MIN, i16::MAX, false);
+                let score = self.alphabeta_mm(&mut board, depth - 1, i16::MIN, i16::MAX, false);
                 //println!("{score} {row}, {column}");
                 // undo move instead of clone
                 (score, (row, column))
@@ -80,31 +75,6 @@ impl AI {
         //println!("{bstmv:?}");
         //println!("best {best_move:?} score {best_score} at depth {DEPTH}");
         bstmv.expect("a move should've been selected").1
-    }
-
-    pub fn calculate_move(&self, board: &Board, depth: u8) -> (u8, u8) {
-        const DEPTH: u8 = 6;
-        let depth = depth.max(DEPTH);
-
-        let mut best_move = (0, 0);
-        let mut best_score = i16::MIN;
-        for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
-            let mut board = board.clone();
-            board.do_move(row, column, self.ai_shape);
-            let score = self.minimax(&mut board, depth - 1, false);
-            // undo move instead of clone
-            best_move = if score > best_score {
-                best_score = score;
-                (row, column)
-            } else {
-                best_move
-            };
-
-            println!("move {:?} with score {score}", (row, column));
-        }
-
-        println!("best {best_move:?} score {best_score} at depth {DEPTH}");
-        best_move
     }
 
     fn alphabeta_mm(
@@ -130,6 +100,7 @@ impl AI {
                     break;
                 }
             }
+
             score
         } else {
             let mut score = i16::MAX;
@@ -142,30 +113,7 @@ impl AI {
                     break;
                 }
             }
-            score
-        }
-    }
 
-    fn minimax(&self, board: &mut Board, depth: u8, is_max: bool) -> i16 {
-        if depth == 0 || board.calculate_game_status() != flag::STATUS_CONTESTABLE {
-            return self.evaluate(board);
-        }
-
-        if is_max {
-            let mut score = i16::MIN;
-            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
-                let mut board = board.clone();
-                board.do_move(row, column, self.ai_shape);
-                score = score.max(self.minimax(&mut board, depth - 1, false))
-            }
-            score
-        } else {
-            let mut score = i16::MAX;
-            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
-                let mut board = board.clone();
-                board.do_move(row, column, self.opponent_shape);
-                score = score.min(self.minimax(&mut board, depth - 1, true))
-            }
             score
         }
     }
@@ -174,7 +122,7 @@ impl AI {
     /// ± score for:
     /// * won/lost miniboards
     /// * centre-control: ai_shape in centre of miniboard and [near-]winning centre miniboard (#4)
-    /// * pointing to near-won miniboards?
+    /// * pointing to [near]-won miniboards?
     /// * near-won/lost miniboards/full board
     ///     * continuous relative +/- 10
     ///     * unconnected relative +/- 5
@@ -194,7 +142,7 @@ impl AI {
             * SCORE_UNIT
             * MINIBOARD_WIN_COUNT;
 
-        //println!("@ mbs won {score}");
+        // println!("@ mbs won {score}");
         // centre-control: board-wide and in individual miniboards
         let centre_status = board.get_status_of(4);
         score += (((centre_status == self.ai_shape) as i16)
@@ -202,8 +150,9 @@ impl AI {
             * SCORE_UNIT
             * CENTRE_MB_CONTROL;
 
-        //println!("@ centre mb {score}");
+        // println!("@ centre mb {score}");
 
+        // todo combine crude miniboard checks into one
         // crude individual miniboard check
         // todo create bitmask of combined miniboards?
         const CENTRE_CELL_OFFSET: u8 = 8; // (col 1 + row 1 * 3) * 2
@@ -218,16 +167,48 @@ impl AI {
                 * CENTRE_CELL_CONTROL;
         }
 
-        //println!("@ centre cell {score}");
+        // println!("@ centre cell {score}");
+
+        // crude cell-by-cell check for pointing to uncontestable miniboards
+        // get miniboards with move count > 0
+        // TODO: reverse it: get uncontestable MBs then directly check would-be corresponding cells
+        for miniboard in 0..9 {
+            if board.get_total_move_count_of(miniboard) > 0 {
+                let cells = board.get_miniboard_cells(miniboard);
+                for row in 0..3 {
+                    for column in 0..3 {
+                        // get non empty cells and get the status of their corresponding miniboard
+                        let offset = (column + row * 3) * 2;
+                        let mask = 0b11 << offset;
+                        let cell = ((cells & mask) >> offset) as u8;
+                        if cell != flag::EMPTY {
+                            let (mb_row, mb_column) = (miniboard / 3 * 3, miniboard % 3 * 3);
+                            let (cell_row, cell_column) = (mb_row + row, mb_column + column);
+                            let corresponding_status = board.get_status_of(
+                                Board::move_corresponding_miniboard(cell_row, cell_column),
+                            );
+
+                            if corresponding_status != flag::STATUS_CONTESTABLE {
+                                let ai_pointing = (cell == self.ai_shape) as i16;
+                                let opp_pointing = (cell == self.opponent_shape) as i16;
+                                // reward for the ai for avoiding to point towards uncontestable
+                                // miniboards
+                                score += (opp_pointing - ai_pointing)
+                                    * SCORE_UNIT
+                                    * UNCONESTABLE_MB_POINTING;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // println!("@ uncontestable correspondence {score}");
 
         //TODO lines: continuous, unconnected  for cells of miniboards, and miniboards of the game
         // continuous pattern strong for 2:  normal winning line: 10 10 10 -> 10 10 [00] OR [00] 10 10
         // continuous pattern weak for 2:  normal winning line: 10 10 10 -> 10 10 [01] OR [01] 10 10
         // unconnected pattern strong for 2:  normal winning line: 10 10 10 -> 10 [00] 10
         // unconnected pattern weak for 2:  normal winning line: 10 10 10 -> 10 [01] 10
-
-        // we split the pattern by left/right bitshifting to compare the first/last two
-        // winning line coordinates
         // e.g. winning line [(0, 0), (1, 0), (2, 0)] -> [(0, 0), (1, 0), (1, 0), (2, 0)]
         // 2 wins at this offeset: 1010_1000 & 0b1111 << 4 -> 1010_0000 == 1010_0000 <- 1010_1010 & 0b1111 << 4
         // no one wins at this offset: 1010_0100 & 0b1111 -> 0000_0100 != 0000_1010 <- 1010_1010 & 0b1111
@@ -239,11 +220,11 @@ impl AI {
                 let miniboard = column + row * 3;
                 let status = board.get_status_of(miniboard);
 
-                let offset = i * 2;
+                let normalised_offset = i * 2;
                 //println!("{i} -> {offset} - {row} {column} -- {status:02b}");
-                pattern |= (status as u16) << offset;
-                pattern_ai |= (self.ai_shape as u16) << offset;
-                pattern_opp |= (self.opponent_shape as u16) << offset;
+                pattern |= (status as u16) << normalised_offset;
+                pattern_ai |= (self.ai_shape as u16) << normalised_offset;
+                pattern_opp |= (self.opponent_shape as u16) << normalised_offset;
             }
 
             let ai_continous = (pattern_ai & 0b1111 == pattern & 0b1111
@@ -258,11 +239,12 @@ impl AI {
             let opp_unconnected =
                 ((pattern_opp & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
 
+            // todo reward continuous_line for ai
             score += ((ai_continous + ai_unconnected) - (opp_continous + opp_unconnected))
                 * SCORE_UNIT
                 * NEAR_WON_LINES;
         }
-        //println!("@ continuous/unconnected mb lines {score}");
+        // println!("@ continuous/unconnected mb lines {score}");
 
         let game_status = board.calculate_game_status();
         if game_status == self.opponent_shape {
@@ -271,7 +253,7 @@ impl AI {
             score = i16::MAX;
         }
 
-        //println!("final {score}");
+        // println!("final {score}");
 
         score
     }
@@ -297,6 +279,7 @@ fn ai_evaluate() {
         SCORE_UNIT * CENTRE_MB_CONTROL
             + SCORE_UNIT * CENTRE_CELL_CONTROL
             + SCORE_UNIT * MINIBOARD_WIN_COUNT
+            - SCORE_UNIT * UNCONESTABLE_MB_POINTING
     );
     board.reset();
 
@@ -311,6 +294,7 @@ fn ai_evaluate() {
         -SCORE_UNIT * CENTRE_MB_CONTROL
             - SCORE_UNIT * CENTRE_CELL_CONTROL
             - SCORE_UNIT * MINIBOARD_WIN_COUNT
+            + SCORE_UNIT * UNCONESTABLE_MB_POINTING
     );
     board.reset();
 
@@ -343,7 +327,7 @@ fn ai_evaluate() {
 
     // near won/lost continous/unconnected lines
     println!("continuous_line test");
-    board.do_move(3, 0, 2);
+    board.do_move(3, 1, 2);
     board.set_status_of(5, 2);
     board.set_status_of(8, 2);
 
@@ -354,7 +338,7 @@ fn ai_evaluate() {
     assert_eq!(score, SCORE_UNIT * NEAR_WON_LINES * 4);
     board.reset();
 
-    board.do_move(0, 0, 2);
+    board.do_move(1, 0, 2);
     board.set_status_of(0, 2);
     board.set_status_of(6, 2);
 
@@ -368,6 +352,20 @@ fn ai_evaluate() {
 
     // corners * 2?
     assert_eq!(score, 5 * SCORE_UNIT * NEAR_WON_LINES);
+
+    board.reset();
+    // pointing to uncontestable miniboards
+    board.set_status_of(3, 1);
+    board.set_status_of(5, 2);
+
+    board.do_move(2, 0, 2);
+    board.do_move(7, 0, 2);
+    board.do_move(2, 3, 1);
+
+    assert_eq!(
+        ai.evaluate(&board),
+        (1 - 2) * SCORE_UNIT * UNCONESTABLE_MB_POINTING
+    );
 }
 
 #[test]

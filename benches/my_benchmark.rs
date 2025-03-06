@@ -7,12 +7,13 @@ use ut3_oxide::board::{flag, Board, ValidMoveIterator};
 
 fn winrate_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("AI-performance");
+
     // single call speed
     let mut board = Board::new();
     let ai = AI::default();
     let mut rng = rand::prelude::SmallRng::seed_from_u64(7);
 
-    for i in 0..16 {
+    for i in 0..17 {
         let validbitfield = board.valid_moves_bitfield();
         let (row, column) = ValidMoveIterator::new(validbitfield)
             .choose(&mut rng)
@@ -28,21 +29,26 @@ fn winrate_benchmark(c: &mut Criterion) {
 
     group.bench_function("single-call-performance", |b| {
         b.iter(|| {
-            black_box(ai.calculate_move_par(&board, 6));
+            // black_box(ai.calculate_move_par(&board, 6));
+            ai.calculate_move_par(&board, 6);
         });
+    });
+
+    group.bench_function("single-playout", |b| {
+        b.iter(ai_playout);
     });
 
     // winrate
     let iterations = 10;
-    let mut wins = 0u8;
-    let mut draws = 0u8;
-    let mut loses = 0u8;
-    let duration = std::time::Duration::from_secs(7);
+    let mut wins = 0u16;
+    let mut draws = 0u16;
+    let mut loses = 0u16;
+    let duration = std::time::Duration::from_secs(9);
 
     group.sample_size(10).measurement_time(duration);
     group.bench_function("winrate", |b| {
         b.iter(|| {
-            for _ in 0..black_box(iterations) {
+            for _ in 0..iterations {
                 let status = ai_playout();
                 if status == flag::O_PLAYER {
                     wins += 1;
@@ -56,14 +62,16 @@ fn winrate_benchmark(c: &mut Criterion) {
     });
 
     group.finish();
-    let wr = (wins as f64 / (wins + loses + draws) as f64) * 100.0;
+
     let total = wins + loses + draws;
-    println!("wr {wr:.3}% -> {wins}/{total} — loses: {loses} draws: {draws}");
+    let wr = (wins as f64 / total as f64) * 100.0;
+    println!("wr {wr:.2}% -> {wins}/{total} — loses: {loses} draws: {draws}");
 }
 
 fn ai_playout() -> u8 {
     let mut board = Board::new();
     let ai = AI::default();
+    // let aix = AI::new(flag::X_PLAYER);
     //let mut rng = rand::rng();
     let mut rng = rand::prelude::SmallRng::seed_from_u64(7);
 
@@ -74,6 +82,7 @@ fn ai_playout() -> u8 {
             .choose(&mut rng)
             .expect("should be able to get random move");
 
+        // let (row, column) = aix.calculate_move_par(&board, 6);
         board.do_move(row, column, flag::X_PLAYER);
 
         // check

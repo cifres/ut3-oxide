@@ -509,6 +509,7 @@ impl Board {
         flag::STATUS_DRAW
     }
 
+    // TODO: miniboard cells iterator
     /// Offsets a cell by `(row * 3 + column) * 2`
     /// Returns a miniboard's cells as u32
     pub fn get_miniboard_cells(&self, miniboard: u8) -> u32  {
