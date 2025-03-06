@@ -29,13 +29,14 @@ fn main() {
             println!("Game over: result {game_status}");
             break;
         }
-
-        println!("{board:#}");
+        // println!("{board:#}");
         // ai move
         let (row, column) = ai.calculate_move_par(&board, 6);
         board.do_move(row, column, 2);
 
+        print!("\x1B[2J\x1B[1;1H");
         println!("{board:#}");
+        println!("{row} {column} move in -> {}", Board::move_corresponding_miniboard(row, column));
 
         let game_status = board.calculate_game_status();
         if game_status != STATUS_CONTESTABLE {
