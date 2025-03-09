@@ -350,6 +350,7 @@ impl Board {
         
     }
 
+    #[warn(dead_code)]
     pub fn reset(&mut self) {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];

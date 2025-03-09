@@ -7,9 +7,11 @@ const SCORE_UNIT: i16 = 10;
 const CENTRE_CELL_CONTROL: i16 = 1;
 const MINIBOARD_WIN_COUNT: i16 = 4;
 const CENTRE_MB_CONTROL: i16 = 5;
-const NEAR_WON_LINES: i16 = 2;
-const NEAR_WON_MB_LINES: i16 = 1;
 const UNCONESTABLE_MB_POINTING: i16 = 2;
+const NEAR_WON_LINES: i16 = 2;
+const NEAR_WON_MB_LINES: i16 = 1;   // TODO: split usage into continuous and broken
+//const CONTINUOUS_MB_LINES: i16 = 1;
+//const BROKEN_MB_LINES: i16 = 1;
 
 const DEPTH: u8 = 6;
 
@@ -18,7 +20,7 @@ const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
     let mut i = 0;
     // continuous is a 3-in-a-row split up
     // so miniboards [0, 1, 2] become [0, 1] [1, 2]
-    let mut combined = [[(0, 0); 6]; 8];
+    let mut combined = [[(0u8, 0u8); 6]; 8];
 
     while i < WINNING_LINES.len() {
         let wline = WINNING_LINES[i];
