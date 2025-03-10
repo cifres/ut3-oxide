@@ -18,14 +18,14 @@ harness = false
 [profile.release-fast]
 inherits = "release"
 codegen-units = 1
-lto = "fat" 
-strip = "symbols"
+lto = "thin" 
+strip = "debuginfo"
 panic = "abort"
 opt-level = 3
 
 [profile.profiling]
 inherits = "release"
-lto = "fat" 
+lto = "thin" 
 strip = "none"
 opt-level = 3
 panic = "abort"
