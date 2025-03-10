@@ -3,7 +3,7 @@ pub mod ai;
 
 #[cfg(test)]
 mod tests {
-    use crate::board::{flag, Board, ValidMoveIterator};
+    use crate::board::{flag, Board, iterator};
     use crate::ai::AI;
 
     #[test]
@@ -256,8 +256,8 @@ mod tests {
 
         // 9 moves is a draw but ensure priority to win checking
         // by changing last 3 rows to make x win and have 9 moves made 
-        board.set_move_count_of(miniboard, 3, 1);
-        board.set_move_count_of(miniboard, 3, 2);
+        board.set_player_move_count_of(miniboard, 3, 1);
+        board.set_player_move_count_of(miniboard, 3, 2);
         board.set_status_of(miniboard, flag::STATUS_CONTESTABLE);
         board.do_move(8, 6, 1);
         board.do_move(8, 7, 2);
@@ -314,7 +314,7 @@ mod tests {
         board.do_move(1, 1, 2);
 
         board.do_move(0, 2, 1);
-        assert_eq!(board.get_player_move_count_in(0, flag::X_PLAYER), 7);
+        assert_eq!(board.get_player_move_count_of(0, flag::X_PLAYER), 7);
         assert_eq!(board.get_status_of(0), flag::STATUS_X_WIN);
 
     }
@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn get_game_status() {
         let mut board = Board::new();
-        let mut ai = AI::default();
+        let ai = AI::default();
 
         // x win -- miniboards 3, 4, 5 
         board.do_move(3, 0, 1);
@@ -458,7 +458,7 @@ mod tests {
         let mut board = Board::new();
 
         let bitfield = board.valid_moves_bitfield();
-        let valid = ValidMoveIterator::new(bitfield);
+        let valid = iterator::ValidMoveIterator::new(bitfield);
         println!("{bitfield}");
         for (row, col) in valid {
             println!("{row} {col} is valid");
@@ -466,7 +466,7 @@ mod tests {
 
         board.do_move(4, 4, 1);
         let bitfield = board.valid_moves_bitfield();
-        let valid = ValidMoveIterator::new(bitfield);
+        let valid = iterator::ValidMoveIterator::new(bitfield);
         println!("{bitfield}");
         for (row, col) in valid {
             println!("{row} {col} is valid");

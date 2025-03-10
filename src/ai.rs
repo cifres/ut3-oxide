@@ -1,6 +1,6 @@
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::board::{flag, Board, ValidMoveIterator, WINNING_LINES};
+use crate::board::{flag, rules::WINNING_LINES, Board};
 
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT: i16 = 10;
@@ -64,7 +64,9 @@ impl AI {
         // let depth = depth.max(DEPTH);
         let depth = if depth > 0 { depth } else { DEPTH };
 
-        let valid_move_iterator = ValidMoveIterator::new(board.valid_moves_bitfield());
+        //let valid_move_iterator = iterator::ValidMoveIterator::new(board.valid_moves_bitfield());
+        //let valid_move_iterator = ValidMoveIterator::new(board.valid_moves_bitfield());
+        let valid_move_iterator = board.valid_moves();
         let bstmv = valid_move_iterator
             .par_bridge()
             .map(|(row, column)| {
@@ -96,7 +98,8 @@ impl AI {
 
         if is_max {
             let mut score = i16::MIN;
-            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+            //for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+            for (row, column) in board.valid_moves() {
                 let mut board = board.clone();
                 board.do_move(row, column, self.ai_shape);
                 score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
@@ -109,7 +112,7 @@ impl AI {
             score
         } else {
             let mut score = i16::MAX;
-            for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
+            for (row, column) in board.valid_moves() {
                 let mut board = board.clone();
                 board.do_move(row, column, self.opponent_shape);
                 score = score.min(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, true));
