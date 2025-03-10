@@ -2,7 +2,7 @@ use criterion::{criterion_group, criterion_main, Criterion};
 use rand::prelude::*;
 
 use ut3_oxide::ai::AI;
-use ut3_oxide::board::{flag, Board, ValidMoveIterator};
+use ut3_oxide::board::{flag, Board};
 
 const DEPTH: u8 = 5;
 
@@ -12,12 +12,11 @@ fn winrate_benchmark(c: &mut Criterion) {
     // single call speed
     let mut board = Board::new();
     let ai = AI::default();
-    // let mut rng = rand::prelude::SmallRng::seed_from_u64(7);
-    let mut rng = rand::rng();
+    let mut rng = rand::prelude::SmallRng::seed_from_u64(7);
+    //let mut rng = rand::rng();
 
     for i in 0..17 {
-        let validbitfield = board.valid_moves_bitfield();
-        let (row, column) = ValidMoveIterator::new(validbitfield)
+        let (row, column) = board.valid_moves()
             .choose(&mut rng)
             .expect("should be able to get random move");
 
@@ -29,6 +28,13 @@ fn winrate_benchmark(c: &mut Criterion) {
         board.do_move(row, column, player);
     }
 
+    //group
+    //    .significance_level(0.05);
+        //group.sample_size(100);
+    // 298.42 μs @ depth 5
+    // 246.42 μs @ depth 5
+    // 211.28 μs @ depth 5 inline only no (always)
+    // 362.29 μs @ depth 5 mixed
     group.bench_function("single-call-performance", |b| {
         b.iter(|| {
             ai.calculate_move_par(&board, DEPTH);
@@ -70,7 +76,11 @@ fn winrate_benchmark(c: &mut Criterion) {
     let total = wins + losses + draws;
     let average_turns = total_turns as f32 / total as f32;
     let wr = (wins as f64 / total as f64) * 100.0;
-    println!("wr @ depth {DEPTH}: {wr:.2}% -> {wins}/{total} — average game turns = {average_turns:.2} — losses: {losses} draws: {draws}");
+    println!(
+        "wr @ depth {DEPTH}: {wr:.2}% -> {wins}/{total}
+        — average total turns = {average_turns:.2} 
+        — losses: {losses} draws: {draws}",
+    );
 }
 
 fn ai_playout() -> (u8, u8) {
@@ -78,14 +88,15 @@ fn ai_playout() -> (u8, u8) {
     let ai = AI::default();
     let mut turns = 0;
     // let aix = AI::new(flag::X_PLAYER);
-    //
+
     //let mut rng = rand::rng();
     let mut rng = rand::prelude::SmallRng::seed_from_u64(7);
 
     loop {
         // random move
-        let validbitfield = board.valid_moves_bitfield();
-        let (row, column) = ValidMoveIterator::new(validbitfield)
+        //let validbitfield = board.valid_moves_bitfield();
+        //let (row, column) = iterator::ValidMoveIterator::new(validbitfield)
+        let (row, column) = board.valid_moves()
             .choose(&mut rng)
             .expect("should be able to get random move");
 
