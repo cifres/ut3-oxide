@@ -1,6 +1,10 @@
 use rayon::iter::{ParallelBridge, ParallelIterator};
 
-use crate::board::{flag::{self, STATUS_CONTESTABLE}, rules::WINNING_LINES, Board};
+use crate::board::{
+    flag::{self, STATUS_CONTESTABLE},
+    rules::WINNING_LINES,
+    Board,
+};
 
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT: i16 = 10;
@@ -9,11 +13,11 @@ const MINIBOARD_WIN_COUNT: i16 = 4;
 const CENTRE_MB_CONTROL: i16 = 5;
 const UNCONESTABLE_MB_POINTING: i16 = 2;
 const NEAR_WON_LINES: i16 = 2;
-const NEAR_WON_MB_LINES: i16 = 1;   // TODO: split usage into continuous and broken
+const NEAR_WON_MB_LINES: i16 = 1; // TODO: split usage into continuous and broken
 //const CONTINUOUS_MB_LINES: i16 = 1;
 //const BROKEN_MB_LINES: i16 = 1;
 
-const DEPTH: u8 = 6;
+const DEPTH: u8 = 5;
 
 // representing continuous, and broken line patterns
 const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
@@ -61,13 +65,10 @@ impl AI {
     }
 
     pub fn calculate_move_par(&self, board: &Board, depth: u8) -> (u8, u8) {
-        // let depth = depth.max(DEPTH);
         let depth = if depth > 0 { depth } else { DEPTH };
 
-        //let valid_move_iterator = iterator::ValidMoveIterator::new(board.valid_moves_bitfield());
-        //let valid_move_iterator = ValidMoveIterator::new(board.valid_moves_bitfield());
-        let valid_move_iterator = board.valid_moves();
-        let bstmv = valid_move_iterator
+        let valid_moves_iterator = board.valid_moves();
+        let bstmv = valid_moves_iterator
             .par_bridge()
             .map(|(row, column)| {
                 let mut board = board.clone();
@@ -100,7 +101,7 @@ impl AI {
             let mut score = i16::MIN;
             //for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
             for (row, column) in board.valid_moves() {
-                let mut board = board.clone();
+                let mut board = board.clone();      //NOTE: hot
                 board.do_move(row, column, self.ai_shape);
                 score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
                 alpha = alpha.max(score);
@@ -137,6 +138,7 @@ impl AI {
     ///     * interrupted/broken relative +/- 7
     ///
     /// Returns the evaluation of the board state
+    #[no_mangle]
     pub fn evaluate(&self, board: &Board) -> i16 {
         // should the main board produce and return miniboard statuses or the AI?
         // for aishape won miniboards += score_mult
@@ -162,10 +164,10 @@ impl AI {
 
         // todo combine crude miniboard checks into one
         // crude individual miniboard check
-        // todo create bitmask of combined miniboards?
+        // todo create bitmask of combined miniboards statuses?
+        // TODO: combine centre cells in one u32 and compare?
         const CENTRE_CELL_OFFSET: u8 = 8; // (col 1 + row 1 * 3) * 2
-        for miniboard in 0..9 {
-            let cells = board.get_miniboard_cells(miniboard);
+        for cells in (0..9).map(|n| board.get_miniboard_cells(n)) {
             let mask = 0b11 << CENTRE_CELL_OFFSET;
             let centre_cell = ((cells & mask) >> CENTRE_CELL_OFFSET) as u8;
 
@@ -175,81 +177,94 @@ impl AI {
                 * CENTRE_CELL_CONTROL;
         }
 
+        //for miniboard in 0..9 {
+        //    let cells = board.get_miniboard_cells(miniboard);
+        //    let mask = 0b11 << CENTRE_CELL_OFFSET;
+        //    let centre_cell = ((cells & mask) >> CENTRE_CELL_OFFSET) as u8;
+        //
+        //    score += (((centre_cell == self.ai_shape) as i16)
+        //        - ((centre_cell == self.opponent_shape) as i16))
+        //        * SCORE_UNIT
+        //        * CENTRE_CELL_CONTROL;
+        //}
+
         // println!("@ centre cell {score}");
 
-        // crude cell-by-cell check for pointing to uncontestable miniboards
-        // get miniboards with move count > 0
-        // TODO: reverse it: get uncontestable MBs then directly check would-be corresponding cells
-        //let uncontestable =
-        //    (0..9).filter(|&miniboard| board.get_status_of(miniboard) != STATUS_CONTESTABLE);
-
-        for miniboard in 0..9 {
-            if board.get_total_move_count_of(miniboard) > 0 {
-                let cells = board.get_miniboard_cells(miniboard);
-
-                // continuous_line/broken line patterns within miniboards
-                for line in LINE_PATTERNS {
-                    let mut pattern = 0u16;
-                    let mut pattern_ai = 0u16;
-                    let mut pattern_opp = 0u16;
-                    // TODO: extract into resuable function which compares a u16 of 4 bit groups * 3
-                    // patterns to ai/opponent patterns
-                    for (i, (row, column)) in line.iter().enumerate() {
-                        let offset = (column + row * 3) * 2;
-                        let mask = 0b11 << offset;
-                        let cell = ((cells & mask) >> offset) as u8;
-
-                        let normalised_offset = i * 2;
-                        pattern |= (cell as u16) << normalised_offset;
-                        pattern_ai |= (self.ai_shape as u16) << normalised_offset;
-                        pattern_opp |= (self.opponent_shape as u16) << normalised_offset;
-                    }
-
-                    let ai_continous = (pattern_ai & 0b1111 == pattern & 0b1111
-                        || pattern_ai & (0b1111 << 4) == pattern & (0b1111 << 4))
-                        as i16;
-
-                    let opp_continous = (pattern_opp & 0b1111 == pattern & 0b1111
-                        || pattern_opp & (0b1111 << 4) == pattern & (0b1111 << 4))
-                        as i16;
-
-                    let ai_unconnected =
-                        ((pattern_ai & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
-                    let opp_unconnected =
-                        ((pattern_opp & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
-
-                    // todo reward continuous_line for ai
-                    score += ((ai_continous + ai_unconnected) - (opp_continous + opp_unconnected))
-                        * SCORE_UNIT
-                        * NEAR_WON_MB_LINES;
-                }
-
-                // point to uncontestable miniboards?
+        // Reverse it: get uncontestable MBs then directly check would-be corresponding cells
+        // miniboard 4 (1, 1) -> (1, 1), (1, 4), (1, 7)
+        let cells_pointing_to_uncontestable_mbs = (0..9).filter_map(|miniboard| {
+            if board.get_status_of(miniboard) != STATUS_CONTESTABLE {
+                let mut cells = [0; 9];
+                let (mb_row, mb_col) = (miniboard / 3, miniboard % 3); 
                 for row in 0..3 {
-                    for column in 0..3 {
-                        // get non empty cells and get the status of their corresponding miniboard
-                        let offset = (column + row * 3) * 2;
-                        let mask = 0b11 << offset;
-                        let cell = ((cells & mask) >> offset) as u8;
-                        if cell != flag::EMPTY {
-                            let (mb_row, mb_column) = (miniboard / 3 * 3, miniboard % 3 * 3);
-                            let (cell_row, cell_column) = (mb_row + row, mb_column + column);
-                            let corresponding_status = board.get_status_of(
-                                Board::move_corresponding_miniboard(cell_row, cell_column),
-                            );
-
-                            if corresponding_status != flag::STATUS_CONTESTABLE {
-                                let ai_pointing = (cell == self.ai_shape) as i16;
-                                let opp_pointing = (cell == self.opponent_shape) as i16;
-                                // reward for the ai for avoiding to point towards uncontestable
-                                // miniboards
-                                score += (opp_pointing - ai_pointing)
-                                    * SCORE_UNIT
-                                    * UNCONESTABLE_MB_POINTING;
-                            }
-                        }
+                    for col in 0..3 {
+                        let i = col + row * 3;
+                        let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
+                        cells[i as usize] = cell_state;
                     }
                 }
+                Some(cells) 
+            } else {
+                None
+            }
+        });
+
+        for miniboard in cells_pointing_to_uncontestable_mbs {
+            for cell in miniboard {
+                let ai_pointing = cell == self.ai_shape;
+                let opp_pointing = cell == self.opponent_shape;
+
+                score += (opp_pointing as i16 - ai_pointing as i16)
+                    * SCORE_UNIT
+                    * UNCONESTABLE_MB_POINTING;
+            }
+        }
+
+        // for every active miniboard, get its cells and check for near won patterns
+        let active_miniboard_cells = (0..9).filter_map(|miniboard| {
+            if board.get_total_move_count_of(miniboard) > 0 {
+                Some(board.get_miniboard_cells(miniboard))
+            } else {
+                None
+            }
+        });
+
+        for cells in active_miniboard_cells {
+            // continuous_line/broken line patterns within miniboards
+            for line in LINE_PATTERNS {
+                let mut pattern = 0u16;
+                let mut pattern_ai = 0u16;
+                let mut pattern_opp = 0u16;
+                // TODO: extract into resuable function which compares a u16 of 4 bit groups * 3
+                // patterns to ai/opponent patterns
+                for (i, (row, column)) in line.iter().enumerate() {
+                    let offset = (column + row * 3) * 2;
+                    let mask = 0b11 << offset;
+                    let cell = ((cells & mask) >> offset) as u8;
+
+                    let normalised_offset = i * 2;
+                    pattern |= (cell as u16) << normalised_offset;
+                    pattern_ai |= (self.ai_shape as u16) << normalised_offset;
+                    pattern_opp |= (self.opponent_shape as u16) << normalised_offset;
+                }
+
+                let ai_continous = (pattern_ai & 0b1111 == pattern & 0b1111
+                    || pattern_ai & (0b1111 << 4) == pattern & (0b1111 << 4))
+                    as i16;
+
+                let opp_continous = (pattern_opp & 0b1111 == pattern & 0b1111
+                    || pattern_opp & (0b1111 << 4) == pattern & (0b1111 << 4))
+                    as i16;
+
+                let ai_unconnected =
+                    ((pattern_ai & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
+                let opp_unconnected =
+                    ((pattern_opp & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
+
+                // todo reward continuous_line for ai
+                score += ((ai_continous + ai_unconnected) - (opp_continous + opp_unconnected))
+                    * SCORE_UNIT
+                    * NEAR_WON_MB_LINES;
             }
         }
         // println!("@ uncontestable correspondence {score}");
@@ -429,4 +444,47 @@ fn ai_minimax() {
     // board.do_move(2, 4, 1);
     // let aimove = ai.calculate_move(&board, 6);
     // println!("{aimove:?}");
+}
+
+#[test]
+fn cells_corresponding_to_uncontestable() {
+    let mut board = Board::new();
+    board.do_move(8, 8, 2);
+    board.set_status_of(8, 1);
+
+    let cells_to_uncontestable_mbs = (0..9).filter_map(|miniboard| {
+        if board.get_status_of(miniboard) != STATUS_CONTESTABLE {
+            let mut cells = [0; 9];
+            let (mb_row, mb_col) = (miniboard / 3, miniboard % 3); 
+            for row in 0..3 {
+                for col in 0..3 {
+                    let i = col + row * 3;
+                    println!("{:?}", (mb_row + row * 3, mb_col + col * 3));
+                    let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
+                    cells[i as usize] = cell_state;
+                }
+            }
+            Some(cells)     // cells that point to this uncontestable one
+        } else {
+            None
+        }
+    }).collect::<Vec<_>>();
+
+    //let cells_to_uncontestable_mbs = (0..9).filter_map(|miniboard| {
+    //    if board.get_status_of(miniboard) != STATUS_CONTESTABLE {
+    //        let mut cells = [(0, 0); 9];
+    //        let (mb_row, mb_col) = (miniboard / 3, miniboard % 3); 
+    //        for row in 0..3 {
+    //            for col in 0..3 {
+    //                let i = col + row * 3;
+    //                cells[i] = (mb_row as usize + row * 3, mb_col as usize + col * 3);
+    //            }
+    //        }
+    //        Some(cells)     // cells that point to this uncontestable one
+    //    } else {
+    //        None
+    //    }
+    //}).collect::<Vec<_>>();
+
+    println!("{cells_to_uncontestable_mbs:?}");
 }
