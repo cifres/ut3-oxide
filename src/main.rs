@@ -13,43 +13,43 @@ fn main() -> Result<(), std::io::Error> {
     println!("{board:#}");
     // todo merge vs ai and AI X vs AI O based on prescence of command line args?
 
-    //board.do_move(2, 4, 1);
-    //let aimove = ai_o.calculate_move_par(&board, 6);
-    //println!("{aimove:?}");
+    board.do_move(2, 4, 1);
+    let aimove = ai_x.calculate_move_par(&board, 7);
+    println!("{aimove:?}");
     //println!("{board:#}");
 
-    loop {
-        let (row, column) = ask_move();
-        if !board.is_valid_move(row, column) {
-            println!("{board:#}");
-            println!("invalid!");
-            continue;
-        }
-
-        board.do_move(row, column, 1);
-        let game_status = board.calculate_game_status();
-        if game_status != STATUS_CONTESTABLE {
-            println!("Game over: result {game_status}");
-            return Ok(());
-        }
-        // println!("{board:#}");
-        // ai move
-        let (row, column) = ai_x.calculate_move_par(&board, 7);
-        board.do_move(row, column, 2);
-
-        print!("\x1B[2J\x1B[1;1H");
-        println!("{board:#}");
-        println!(
-            "{row} {column} move in -> {}",
-            Board::move_corresponding_miniboard(row, column)
-        );
-
-        let game_status = board.calculate_game_status();
-        if game_status != STATUS_CONTESTABLE {
-            println!("Game over: result {game_status}");
-            return Ok(());
-        }
-    }
+    //loop {
+    //    let (row, column) = ask_move();
+    //    if !board.is_valid_move(row, column) {
+    //        println!("{board:#}");
+    //        println!("invalid!");
+    //        continue;
+    //    }
+    //
+    //    board.do_move(row, column, 1);
+    //    let game_status = board.calculate_game_status();
+    //    if game_status != STATUS_CONTESTABLE {
+    //        println!("Game over: result {game_status}");
+    //        return Ok(());
+    //    }
+    //    // println!("{board:#}");
+    //    // ai move
+    //    let (row, column) = ai_x.calculate_move_par(&board, 7);
+    //    board.do_move(row, column, 2);
+    //
+    //    print!("\x1B[2J\x1B[1;1H");
+    //    println!("{board:#}");
+    //    println!(
+    //        "{row} {column} move in -> {}",
+    //        Board::move_corresponding_miniboard(row, column)
+    //    );
+    //
+    //    let game_status = board.calculate_game_status();
+    //    if game_status != STATUS_CONTESTABLE {
+    //        println!("Game over: result {game_status}");
+    //        return Ok(());
+    //    }
+    //}
 
     //let mut args = env::args();
     //let _ = args.next();
@@ -103,6 +103,8 @@ fn main() -> Result<(), std::io::Error> {
     //        std::process::exit(0);
     //    }
     //}
+    
+    Ok(())
 }
 
 //fn ask_depth() -> u8 {

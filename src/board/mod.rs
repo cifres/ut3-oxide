@@ -1,8 +1,19 @@
-pub mod iterator;
 pub mod rules;
 pub mod display;
+pub mod iterator;
 
 use iterator::ValidMoveIterator;
+// TODO: move miniboard, move_corresponding_miniboard, miniboard_starting_coord lookup tables
+// miniboard 1d -> miniboard 2d:     mb // 3, mb % 3
+// miniboard -> starting_coord:      mb // 3 * 3, mb % 3 * 3
+// move -> miniboard:                row // 3 * 3 + column 
+// move -> corresponding mb:        (column % 3) + (row % 3) * 3
+// miniboard -> corresponding cells: 
+// mb 1, 2 (5) <- row * 3, col
+//  (1, 2) (1, 5) (1, 8)
+//  (4, 2) (4, 5) (4, 8)
+//  (7, 2) (7, 5) (7, 8)
+// mb -> (mb // 3) + (row * 3), (mb % 3) + col * 3 
 
 #[allow(dead_code)]
 pub mod flag {
@@ -103,6 +114,7 @@ impl Board {
         self.main_board[miniboard] |= mask;
     }
 
+    // NOTE: hot function
     #[inline(always)]
     pub fn get_status_of(&self, miniboard: u8) -> u8 {
         self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE) 
@@ -135,6 +147,7 @@ impl Board {
         self.xo_miniboard_win_count = win_count;
     }
 
+    //NOTE: hot function
     //#[inline(always)]
     pub fn get_player_move_count_of(&self, miniboard: u8, player: u8) -> u8 {
         // maps 1 => 22 and 2 => 26
@@ -203,7 +216,8 @@ impl Board {
         (column % 3) + (row % 3) * 3
     }
 
-    // TODO: miniboard cells iterator
+    // NOTE: hot function
+    // TODO: miniboard cells iterator?
     /// Offsets a cell by `(row * 3 + column) * 2`
     /// Returns a miniboard's cells as u32
     pub fn get_miniboard_cells(&self, miniboard: u8) -> u32  {
@@ -215,6 +229,9 @@ impl Board {
         debug_assert!(starting_row % 3 == 0 && starting_row <= 6);
         debug_assert!(starting_column % 3 == 0 && starting_column <= 6);
 
+        // todo do row by row, so 
+        // for miniboard 4 -> [3,3 3,4 3,5] [4,3 4,4 4,5] [5,3 5,4 5,5] 
+        // not cell by cell
         for row in 0..3 {
             for column in 0..3 {
                 // * 2 to account for cell bit length of 2;
