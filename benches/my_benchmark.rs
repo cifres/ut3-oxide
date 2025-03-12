@@ -49,16 +49,15 @@ fn winrate_benchmark(c: &mut Criterion) {
     let mut wins = 0u16;
     let mut draws = 0u16;
     let mut losses = 0u16;
-    let mut total_turns = 0u16;
+    let mut total_turns = 0u32;
     let duration = std::time::Duration::from_secs(17);
 
     // group.sample_size(10).measurement_time(duration);
     group.measurement_time(duration);
     group.bench_function("winrate", |b| {
         b.iter(|| {
-            // for _ in 0..iterations {
             let (status, turns) = ai_playout();
-            total_turns += turns as u16;
+            total_turns += turns as u32;
             if status == flag::O_PLAYER {
                 wins += 1;
             } else if status == flag::STATUS_DRAW {
@@ -66,7 +65,6 @@ fn winrate_benchmark(c: &mut Criterion) {
             } else if status == flag::X_PLAYER {
                 losses += 1;
             }
-            // }
             status
         });
     });
@@ -76,6 +74,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     let total = wins + losses + draws;
     let average_turns = total_turns as f32 / total as f32;
     let wr = (wins as f64 / total as f64) * 100.0;
+    println!("{total_turns}");
     println!(
         "wr @ depth {DEPTH}: {wr:.2}% -> {wins}/{total}
         — average total turns = {average_turns:.2} 
