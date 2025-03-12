@@ -2,21 +2,22 @@ mod ai;
 mod board;
 
 use ai::AI;
-use board::{flag::{STATUS_CONTESTABLE, X_PLAYER}, Board};
+use board::{flag, Board};
 use std::io::{self, Write};
 
 fn main() -> Result<(), std::io::Error> {
     let mut board = Board::new();
-    let ai_x = AI::new(X_PLAYER);
+    let ai_x = AI::new(flag::X_PLAYER);
     //let ai_o = AI::default();
 
-    println!("{board:#}");
+    //println!("{board:#}");
     // todo merge vs ai and AI X vs AI O based on prescence of command line args?
 
-    board.do_move(2, 4, 1);
-    let aimove = ai_x.calculate_move_par(&board, 7);
-    println!("{aimove:?}");
-    //println!("{board:#}");
+    board.do_move(2, 4, flag::O_PLAYER);
+    let (row, column) = ai_x.calculate_move_par(&board, 7);
+    board.do_move(row, column, flag::X_PLAYER);
+    println!("{row}, {column}");
+    println!("{board:#}");
 
     //loop {
     //    let (row, column) = ask_move();

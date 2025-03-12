@@ -19,7 +19,8 @@ const NEAR_WON_MB_LINES: i16 = 1; // TODO: split usage into continuous and broke
 
 const DEPTH: u8 = 5;
 
-// representing continuous, and broken line patterns
+// Winning lines composed into continous and broken line patterns
+// [(0, 0), (0, 1), (0, 2)] -> [(0, 0), (0, 1), (0, 1), (0, 2), (0, 0), (0, 2)]
 const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
     let mut i = 0;
     // continuous is a 3-in-a-row split up
@@ -164,7 +165,6 @@ impl AI {
 
         // todo combine crude miniboard checks into one
         // crude individual miniboard check
-        // todo create bitmask of combined miniboards statuses?
         // TODO: combine centre cells in one u32 and compare?
         const CENTRE_CELL_OFFSET: u8 = 8; // (col 1 + row 1 * 3) * 2
         for cells in (0..9).map(|n| board.get_miniboard_cells(n)) {
@@ -277,13 +277,16 @@ impl AI {
         // e.g. winning line [(0, 0), (1, 0), (2, 0)] -> [(0, 0), (1, 0), (1, 0), (2, 0)]
         // 2 wins at this offeset: 1010_1000 & 0b1111 << 4 -> 1010_0000 == 1010_0000 <- 1010_1010 & 0b1111 << 4
         // no one wins at this offset: 1010_0100 & 0b1111 -> 0000_0100 != 0000_1010 <- 1010_1010 & 0b1111
+
+        // for each row of pattern, make u32?
+        let mbss = board.get_miniboard_statuses();
         for line in LINE_PATTERNS {
             let mut pattern = 0u16;
             let mut pattern_ai = 0u16;
             let mut pattern_opp = 0u16;
             for (i, (row, column)) in line.iter().enumerate() {
                 let miniboard = column + row * 3;
-                let status = board.get_status_of(miniboard);
+                let status = (mbss & (0b11 << (miniboard * 2))) >> (miniboard * 2);
 
                 let normalised_offset = i * 2;
                 pattern |= (status as u16) << normalised_offset;
@@ -444,47 +447,4 @@ fn ai_minimax() {
     // board.do_move(2, 4, 1);
     // let aimove = ai.calculate_move(&board, 6);
     // println!("{aimove:?}");
-}
-
-#[test]
-fn cells_corresponding_to_uncontestable() {
-    let mut board = Board::new();
-    board.do_move(8, 8, 2);
-    board.set_status_of(8, 1);
-
-    let cells_to_uncontestable_mbs = (0..9).filter_map(|miniboard| {
-        if board.get_status_of(miniboard) != STATUS_CONTESTABLE {
-            let mut cells = [0; 9];
-            let (mb_row, mb_col) = (miniboard / 3, miniboard % 3); 
-            for row in 0..3 {
-                for col in 0..3 {
-                    let i = col + row * 3;
-                    println!("{:?}", (mb_row + row * 3, mb_col + col * 3));
-                    let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
-                    cells[i as usize] = cell_state;
-                }
-            }
-            Some(cells)     // cells that point to this uncontestable one
-        } else {
-            None
-        }
-    }).collect::<Vec<_>>();
-
-    //let cells_to_uncontestable_mbs = (0..9).filter_map(|miniboard| {
-    //    if board.get_status_of(miniboard) != STATUS_CONTESTABLE {
-    //        let mut cells = [(0, 0); 9];
-    //        let (mb_row, mb_col) = (miniboard / 3, miniboard % 3); 
-    //        for row in 0..3 {
-    //            for col in 0..3 {
-    //                let i = col + row * 3;
-    //                cells[i] = (mb_row as usize + row * 3, mb_col as usize + col * 3);
-    //            }
-    //        }
-    //        Some(cells)     // cells that point to this uncontestable one
-    //    } else {
-    //        None
-    //    }
-    //}).collect::<Vec<_>>();
-
-    println!("{cells_to_uncontestable_mbs:?}");
 }

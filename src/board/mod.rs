@@ -244,6 +244,19 @@ impl Board {
 
         cells
     }
+
+    /// Returns the miniboard statuses and packs them into a `u32`
+    pub fn get_miniboard_statuses(&self) -> u32 {
+        let mut statuses = 0u32;
+        for mb in 0..self.main_board.len() as u8 {
+            let status = self.get_status_of(mb);
+            let offset = mb * 2;
+
+            statuses |= (status as u32) << offset;
+        }
+
+        statuses
+    }
 }
 
 impl Default for Board {
@@ -252,3 +265,16 @@ impl Default for Board {
     }
 }
 
+
+#[test]
+fn statusesmb() {
+    let mut board = Board::new();
+    board.set_status_of(0, 2);
+    board.set_status_of(1, 1);
+    board.set_status_of(2, 2);
+    board.set_status_of(8, 1);
+
+    let statuses = board.get_miniboard_statuses();
+    assert_eq!(statuses, 0b10000_000000_100110);
+    //println!("{statuses:0b}");
+}
