@@ -216,7 +216,6 @@ impl Board {
         (column % 3) + (row % 3) * 3
     }
 
-    // NOTE: hot function
     // TODO: miniboard cells iterator?
     /// Offsets a cell by `(row * 3 + column) * 2`
     /// Returns a miniboard's cells as u32
@@ -229,17 +228,17 @@ impl Board {
         debug_assert!(starting_row % 3 == 0 && starting_row <= 6);
         debug_assert!(starting_column % 3 == 0 && starting_column <= 6);
 
-        // todo do row by row, so 
+        // do row by row, so 
         // for miniboard 4 -> [3,3 3,4 3,5] [4,3 4,4 4,5] [5,3 5,4 5,5] 
         // not cell by cell
+        let col_offset = starting_column * 2;
+        let columns_mask = 0b11_11_11 << col_offset;
         for row in 0..3 {
-            for column in 0..3 {
-                // * 2 to account for cell bit length of 2;
-                let mask_offset = (row * 3 + column) * 2;
-                let cell = self.get_cell(starting_row + row, starting_column + column);
-                let mask = (cell as u32) << mask_offset;
-                cells |= mask; 
-            }
+            // * 2 to account for cell bit length of 2;
+            let row_cells =
+                (self.main_board[(starting_row + row) as usize] & columns_mask) >> col_offset;
+            let cell_mask_offset = (row * 3) * 2;
+            cells |= row_cells << cell_mask_offset;
         }
 
         cells
@@ -266,6 +265,7 @@ impl Default for Board {
 }
 
 
+// TODO: move all tests to right place
 #[test]
 fn statusesmb() {
     let mut board = Board::new();
@@ -276,5 +276,19 @@ fn statusesmb() {
 
     let statuses = board.get_miniboard_statuses();
     assert_eq!(statuses, 0b10000_000000_100110);
-    //println!("{statuses:0b}");
+}
+
+#[test]
+fn get_miniboard_cells_v2() {
+    let mut board = Board::new();
+    board.set_cell(3, 3, 1);
+    board.set_cell(3, 4, 2);
+    board.set_cell(3, 5, 2);
+
+    board.set_cell(4, 4, 2);
+
+    board.set_cell(5, 5, 1);
+
+    let cells = board.get_miniboard_cells(4);
+    assert_eq!(cells, 0b010000_001000_101001);
 }

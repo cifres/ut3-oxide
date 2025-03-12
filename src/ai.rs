@@ -6,6 +6,7 @@ use crate::board::{
     Board,
 };
 
+// TODO: adjust weights
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT: i16 = 10;
 const CENTRE_CELL_CONTROL: i16 = 1;
@@ -221,6 +222,7 @@ impl AI {
         }
 
         // for every active miniboard, get its cells and check for near won patterns
+        // NOTE: hot: this loop 
         let active_miniboard_cells = (0..9).filter_map(|miniboard| {
             if board.get_total_move_count_of(miniboard) > 0 {
                 Some(board.get_miniboard_cells(miniboard))
