@@ -95,17 +95,17 @@ impl Board {
         true
     }
 
-    // TODO: order moves by importance?
     /// Generates a bitfield from the valid moves on the miniboards
     /// `1` == valid and `0` == invalid
+    // TODO: order moves by importance?
     pub fn valid_moves_bitfield(&self) -> u128 {
         let mut moves_validity_bitfield = 0u128;
 
         // if corresponding is uncontestable, we fully validate the whole board
         // otherwise, we check for valid moves only in the corresponding miniboard
-        // full
         let (last_row, last_column) = self.last_move;
         let corresponding_mb = Self::move_corresponding_miniboard(last_row, last_column);
+
         if self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE
             && self.last_move.0 != flag::NEW_GAME
         {

@@ -138,6 +138,7 @@ impl AI {
     ///     * continuous relative +/- 10
     ///     * unconnected relative +/- 5
     ///     * interrupted/broken relative +/- 7
+    /// * sending to miniboard
     ///
     /// Returns the evaluation of the board state
     #[no_mangle]
@@ -321,7 +322,10 @@ impl AI {
         } else if game_status == self.ai_shape {
             score = i16::MAX;
         }
-
+        
+        /* Sending to free boards */
+        // crude cell-by-cell ccheckl
+        //for 
         // println!("final {score}");
 
         score

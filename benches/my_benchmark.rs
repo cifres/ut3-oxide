@@ -57,6 +57,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     group.bench_function("winrate", |b| {
         b.iter(|| {
             let (status, turns) = ai_playout();
+            //let (status, turns) = ai_vs_ai();
             total_turns += turns as u32;
             if status == flag::O_PLAYER {
                 wins += 1;
@@ -76,9 +77,9 @@ fn winrate_benchmark(c: &mut Criterion) {
     let wr = (wins as f64 / total as f64) * 100.0;
     println!("{total_turns}");
     println!(
-        "wr @ depth {DEPTH}: {wr:.2}% -> {wins}/{total}
+        "wr @ depth {DEPTH}: {wr:.2}% -> (O) {wins}/{total}
         — average total turns = {average_turns:.2} 
-        — losses: {losses} draws: {draws}",
+        — losses (X): {losses} draws: {draws}",
     );
 }
 
@@ -112,6 +113,38 @@ fn ai_playout() -> (u8, u8) {
 
         // ai move
         let (row, column) = ai.calculate_move_par(&board, DEPTH);
+        board.do_move(row, column, flag::O_PLAYER);
+        turns += 1;
+
+        // check
+        let game_status = board.calculate_game_status();
+        if game_status != flag::STATUS_CONTESTABLE {
+            //println!("Game over: result {game_status}");
+            return (game_status, turns);
+        }
+    }
+}
+
+fn ai_vs_ai() -> (u8, u8) {
+    let mut board = Board::new();
+    let aix = AI::new(flag::X_PLAYER);
+    let aio = AI::default();
+    let mut turns = 0;
+
+    loop {
+        let (row, column) = aix.calculate_move_par(&board, DEPTH);
+        board.do_move(row, column, flag::X_PLAYER);
+        turns += 1;
+
+        // check
+        let game_status = board.calculate_game_status();
+        if game_status != flag::STATUS_CONTESTABLE {
+            //println!("Game over: result {game_status}");
+            return (game_status, turns);
+        }
+
+        // ai move
+        let (row, column) = aio.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
         turns += 1;
 
