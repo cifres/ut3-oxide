@@ -151,23 +151,23 @@ impl Board {
     //#[inline(always)]
     pub fn get_player_move_count_of(&self, miniboard: u8, player: u8) -> u8 {
         // maps 1 => 22 and 2 => 26
-        let player_movecount = flag::MINIBOARD_MOVE_COUNT_X + (player - 1) * 4;
-        assert!(
-            player_movecount == flag::MINIBOARD_MOVE_COUNT_X
-            || player_movecount == flag::MINIBOARD_MOVE_COUNT_O
+        let player_flag = flag::MINIBOARD_MOVE_COUNT_X + (player - 1) * 4;
+        debug_assert!(
+            player_flag == flag::MINIBOARD_MOVE_COUNT_X
+            || player_flag == flag::MINIBOARD_MOVE_COUNT_O
         );
-        self.get_meta_data(miniboard, player_movecount, flag::MOVE_COUNT_BIT_SIZE)
+        self.get_meta_data(miniboard, player_flag, flag::MOVE_COUNT_BIT_SIZE)
     }
 
     //#[inline(always)]
     pub fn set_player_move_count_of(&mut self, miniboard: u8, value: u8, player: u8) {
         // maps 1 => 22 and 2 => 26
-        let player_movecount = flag::MINIBOARD_MOVE_COUNT_X + (player - 1) * 4;
-        assert!(
-            player_movecount == flag::MINIBOARD_MOVE_COUNT_X
-            || player_movecount == flag::MINIBOARD_MOVE_COUNT_O
+        let player_flag = flag::MINIBOARD_MOVE_COUNT_X + (player - 1) * 4;
+        debug_assert!(
+            player_flag == flag::MINIBOARD_MOVE_COUNT_X
+            || player_flag == flag::MINIBOARD_MOVE_COUNT_O
         );
-        self.set_meta_data(miniboard, player_movecount, flag::MOVE_COUNT_BIT_SIZE, value); 
+        self.set_meta_data(miniboard, player_flag, flag::MOVE_COUNT_BIT_SIZE, value); 
     }
 
     //#[inline(always)]

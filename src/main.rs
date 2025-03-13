@@ -15,8 +15,8 @@ fn main() -> Result<(), std::io::Error> {
     board.do_move(2, 4, flag::O_PLAYER);
     let (row, column) = ai_x.calculate_move_par(&board, 7);
     board.do_move(row, column, flag::X_PLAYER);
-    println!("{row}, {column}");
-    println!("{board:#}");
+    //println!("{row}, {column}");
+    //println!("{board:#}");
 
     //loop {
     //    let (row, column) = ask_move();

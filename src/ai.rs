@@ -10,6 +10,7 @@ use crate::board::{
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT: i16 = 10;
 const CENTRE_CELL_CONTROL: i16 = 1;
+const CELL_CORRESPONDING_SAME_MB: i16 = 2;
 const MINIBOARD_WIN_COUNT: i16 = 4;
 const CENTRE_MB_CONTROL: i16 = 5;
 const UNCONESTABLE_MB_POINTING: i16 = 2;
@@ -316,6 +317,26 @@ impl AI {
         }
         // println!("@ continuous/unconnected mb lines {score}");
 
+        /* Sending to free boards */
+        // free board = board with a cell that redirects to its board
+        // e.g. 0, 0 -> 0, 4, 4 -> mb 4, 8, 8 -> 8
+        for row in board.main_board.iter().step_by(4) {
+            let first = (row & 0b11) as u8;
+            let middle = ((row & 0b11 << 8) >> 8) as u8;
+            let end = ((row & 0b11 << 16) >> 16) as u8;
+
+            let ai_used_free = (((first == self.ai_shape) as u8)
+                + ((middle == self.ai_shape) as u8)
+                + ((end == self.ai_shape) as u8)) as i16;
+
+            let opp_used_free = (((first == self.opponent_shape) as u8)
+                + ((middle == self.opponent_shape) as u8)
+                + ((end == self.opponent_shape) as u8)) as i16; 
+            
+            //println!("")
+            score += (ai_used_free - opp_used_free) * SCORE_UNIT * CELL_CORRESPONDING_SAME_MB;
+        }
+
         let game_status = board.calculate_game_status();
         if game_status == self.opponent_shape {
             score = i16::MIN;
@@ -323,9 +344,6 @@ impl AI {
             score = i16::MAX;
         }
         
-        /* Sending to free boards */
-        // crude cell-by-cell ccheckl
-        //for 
         // println!("final {score}");
 
         score
@@ -353,6 +371,7 @@ fn ai_evaluate() {
             + SCORE_UNIT * CENTRE_CELL_CONTROL
             + SCORE_UNIT * MINIBOARD_WIN_COUNT
             + SCORE_UNIT * NEAR_WON_MB_LINES * 2
+            + SCORE_UNIT * CELL_CORRESPONDING_SAME_MB
             - SCORE_UNIT * UNCONESTABLE_MB_POINTING
     );
     board.reset();
@@ -369,6 +388,7 @@ fn ai_evaluate() {
             - SCORE_UNIT * CENTRE_CELL_CONTROL
             - SCORE_UNIT * MINIBOARD_WIN_COUNT
             - SCORE_UNIT * NEAR_WON_MB_LINES * 2
+            - SCORE_UNIT * CELL_CORRESPONDING_SAME_MB
             + SCORE_UNIT * UNCONESTABLE_MB_POINTING
     );
     board.reset();
