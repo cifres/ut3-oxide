@@ -202,6 +202,9 @@ impl AI {
 
             let mut cells = Vec::with_capacity(9);
             let (mb_row, mb_col) = ((mb_status / 3), (mb_status % 3)); 
+            // TODO: use step_by to do it row by row instead of cell by cell
+            // 0..9 -> step_by 3 -> row 1 col 1 | 4 | 7 ...
+            // TODO: consider packing into a u32
             for row in 0..3 {
                 for col in 0..3 {
                     let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
@@ -322,8 +325,8 @@ impl AI {
         // e.g. 0, 0 -> 0, 4, 4 -> mb 4, 8, 8 -> 8
         for row in board.main_board.iter().step_by(4) {
             let first = (row & 0b11) as u8;
-            let middle = ((row & 0b11 << 8) >> 8) as u8;
-            let end = ((row & 0b11 << 16) >> 16) as u8;
+            let middle = ((row & (0b11 << 8)) >> 8) as u8;
+            let end = ((row & (0b11 << 16)) >> 16) as u8;
 
             let ai_used_free = (((first == self.ai_shape) as u8)
                 + ((middle == self.ai_shape) as u8)
