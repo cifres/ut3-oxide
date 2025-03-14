@@ -1,4 +1,4 @@
-use super::{flag, Board, ValidMoveIterator};
+use super::{flag, Board, iterator::ValidMoveIterator};
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
     const ROW_LINE: [(u8, u8); 9] = const {
@@ -59,13 +59,12 @@ impl Board {
         assert!(row < 9);
         assert!(column < 9);
 
-        if self.last_move == (flag::NEW_GAME, flag::NEW_GAME) {
-            //println!("valid {:?}", (row, column));
+        if self.is_first_move() {
             return true;
         }
 
-        let miniboard = Self::move_miniboard(row, column);
         let (last_row, last_column) = self.last_move;
+        let miniboard = Self::move_miniboard(row, column);
         let corresponding_miniboard = Self::move_corresponding_miniboard(last_row, last_column);
 
         let cell_is_empty = self.get_cell(row, column) == flag::EMPTY;
@@ -106,8 +105,8 @@ impl Board {
         let (last_row, last_column) = self.last_move;
         let corresponding_mb = Self::move_corresponding_miniboard(last_row, last_column);
 
-        if self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE
-            && self.last_move.0 != flag::NEW_GAME
+        if !self.is_first_move()
+            && self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE
         {
             // TODO: could directly check for cell == empty and first move of the game exception for
             // faster eval?
@@ -133,6 +132,15 @@ impl Board {
 
             moves_validity_bitfield
         }
+    }
+
+    fn is_first_move(&self) -> bool {
+        let (last_row, last_column) = self.last_move;
+        let last_cell = self.get_cell(last_row, last_column);
+
+        last_cell == flag::EMPTY
+
+        //last_row == flag::NEW_GAME
     }
 
     pub fn valid_moves(&self) -> ValidMoveIterator {
