@@ -201,16 +201,43 @@ impl AI {
             }
 
             let mut cells = Vec::with_capacity(9);
+            //let mut cells_int = 0u32;
             let (mb_row, mb_col) = ((mb_status / 3), (mb_status % 3)); 
+            // TODO: use step_by to do it row by row instead of cell by cell
+            // 0..9 -> step_by 3 -> row 1 col 1 | 4 | 7 ...
+            // TODO: consider packing into a u32
+            //for i in (0..9).step_by(3) {
+            //}
             for row in 0..3 {
                 for col in 0..3 {
+                    //println!("{:?}", (row, col, mb_row + row * 3, mb_col + col * 3, mb_status));
+                    // board.main_board[row]...
                     let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
                     cells.push(cell_state);
+                    //let offset = ((col) + (row * 3)) * 2;
+                    //cells_int |= (cell_state as u32) << offset;
                 }
             }
 
+            //println!("{mb_status} -> {cells_int}");
+            //println!("{cells:?} vs {cells_int:032b}");
             Some(cells) 
+            //Some(cells_int)
         });
+
+            //for pointing_cell in cells_pointing_to_uncontestable_mbs {
+            //    for i in 0..9 {
+            //    // extract cells one by one
+            //    let offset = i * 2;
+            //    let cell = ((pointing_cell & (0b11 << offset)) >> offset) as u8;
+            //    let ai_pointing = cell == self.ai_shape;
+            //    let opp_pointing = cell == self.opponent_shape;
+            //
+            //    score += (opp_pointing as i16 - ai_pointing as i16)
+            //        * SCORE_UNIT
+            //        * UNCONESTABLE_MB_POINTING;
+            //    }
+            //}
 
         for uncontestable_mb in cells_pointing_to_uncontestable_mbs {
             for pointing_cell in uncontestable_mb {
@@ -322,8 +349,8 @@ impl AI {
         // e.g. 0, 0 -> 0, 4, 4 -> mb 4, 8, 8 -> 8
         for row in board.main_board.iter().step_by(4) {
             let first = (row & 0b11) as u8;
-            let middle = ((row & 0b11 << 8) >> 8) as u8;
-            let end = ((row & 0b11 << 16) >> 16) as u8;
+            let middle = ((row & (0b11 << 8)) >> 8) as u8;
+            let end = ((row & (0b11 << 16)) >> 16) as u8;
 
             let ai_used_free = (((first == self.ai_shape) as u8)
                 + ((middle == self.ai_shape) as u8)
@@ -473,4 +500,22 @@ fn ai_minimax() {
     // board.do_move(2, 4, 1);
     // let aimove = ai.calculate_move(&board, 6);
     // println!("{aimove:?}");
+}
+
+
+#[test]
+fn cells_int() {
+    let mut board = Board::new();
+    let aix = AI::default();
+
+    board.do_move(4, 4, 1);
+    board.do_move(4, 7, 1);
+    board.do_move(4, 1, 1);
+    board.do_move(1, 1, 2);
+    board.set_status_of(4, 1);
+    board.set_status_of(5, 2);
+    board.set_status_of(0, 1);
+    board.set_status_of(8, 1);
+
+    aix.evaluate(&board);
 }
