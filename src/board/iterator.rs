@@ -9,7 +9,7 @@ impl ValidMoveIterator {
 }
 
 impl Iterator for ValidMoveIterator {
-    type Item = (u8, u8); 
+    type Item = (u8, u8);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.bitfield == 0 {
@@ -27,3 +27,34 @@ impl Iterator for ValidMoveIterator {
     }
 }
 
+pub struct MiniboardStatusesIterator {
+    pub bitfield: u32,
+    offset: u8,
+}
+
+impl MiniboardStatusesIterator {
+    pub fn new(bitfield: u32) -> Self {
+        Self {
+            bitfield,
+            offset: 0,
+        }
+    }
+}
+
+impl Iterator for MiniboardStatusesIterator {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset == 9 {
+            return None;
+        }
+
+        let offset = self.offset * 2;
+
+        let mask = 0b11 << offset;
+        let status = ((self.bitfield & mask) >> offset) as u8;
+        self.offset += 1;
+
+        Some(status)
+    }
+}

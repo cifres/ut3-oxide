@@ -472,4 +472,25 @@ mod tests {
             println!("{row} {col} is valid");
         }
     }
+
+    #[test]
+    fn mb_status_iter() {
+        use iterator::MiniboardStatusesIterator;
+        let mut board = Board::new();
+
+        board.set_status_of(0, 2);
+        board.set_status_of(4, 2);
+        board.set_status_of(8, 1);
+
+        let mbss = board.get_miniboard_statuses();
+
+        let mbss_iter = MiniboardStatusesIterator::new(mbss);
+        for (i, mbs) in mbss_iter.enumerate() {
+            match i {
+                0 | 4 => assert_eq!(mbs, 2),
+                8 => assert_eq!(mbs, 1),
+                _ => assert_eq!(mbs, 0)
+            }
+        }
+    }
 }
