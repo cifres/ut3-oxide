@@ -195,27 +195,27 @@ impl AI {
 
         // Reverse it: get uncontestable MBs then directly check would-be corresponding cells
         // miniboard 4 (1, 1) -> (1, 1), (1, 4), (1, 7)
-        let cells_pointing_to_uncontestable_mbs = (0..9).filter_map(|miniboard| {
-            if board.get_status_of(miniboard) != STATUS_CONTESTABLE {
-                let mut cells = [0; 9];
-                let (mb_row, mb_col) = (miniboard / 3, miniboard % 3); 
-                for row in 0..3 {
-                    for col in 0..3 {
-                        let i = col + row * 3;
-                        let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
-                        cells[i as usize] = cell_state;
-                    }
-                }
-                Some(cells) 
-            } else {
-                None
+        let cells_pointing_to_uncontestable_mbs = (0..9).filter_map(|mb_status| {
+            if board.get_status_of(mb_status) == STATUS_CONTESTABLE {
+                return None;
             }
+
+            let mut cells = Vec::with_capacity(9);
+            let (mb_row, mb_col) = ((mb_status / 3), (mb_status % 3)); 
+            for row in 0..3 {
+                for col in 0..3 {
+                    let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
+                    cells.push(cell_state);
+                }
+            }
+
+            Some(cells) 
         });
 
-        for miniboard in cells_pointing_to_uncontestable_mbs {
-            for cell in miniboard {
-                let ai_pointing = cell == self.ai_shape;
-                let opp_pointing = cell == self.opponent_shape;
+        for uncontestable_mb in cells_pointing_to_uncontestable_mbs {
+            for pointing_cell in uncontestable_mb {
+                let ai_pointing = pointing_cell == self.ai_shape;
+                let opp_pointing = pointing_cell == self.opponent_shape;
 
                 score += (opp_pointing as i16 - ai_pointing as i16)
                     * SCORE_UNIT
