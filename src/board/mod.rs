@@ -2,7 +2,6 @@ pub mod rules;
 pub mod display;
 pub mod iterator;
 
-use iterator::ValidMoveIterator;
 // TODO: move miniboard, move_corresponding_miniboard, miniboard_starting_coord lookup tables
 // miniboard 1d -> miniboard 2d:     mb // 3, mb % 3
 // miniboard -> starting_coord:      mb // 3 * 3, mb % 3 * 3
@@ -14,6 +13,24 @@ use iterator::ValidMoveIterator;
 //  (4, 2) (4, 5) (4, 8)
 //  (7, 2) (7, 5) (7, 8)
 // mb -> (mb // 3) + (row * 3), (mb % 3) + col * 3 
+
+const MOVE_CORRESPONDING_MINIBOARD: [u8; 81] = {
+    let mut a = [0u8; 81];
+    let (mut y, mut x) = (0, 0);
+    while y < 9 {
+        while x < 9 {
+            let i = x + y * 9;
+            let miniboard = (x % 3 + (y % 3 * 3)) as u8;
+            a[i] = miniboard;
+
+            x += 1;
+        }
+        x = 0;
+        y += 1;
+    }
+
+    a
+};
 
 #[allow(dead_code)]
 pub mod flag {
@@ -28,7 +45,8 @@ pub mod flag {
     pub (in crate::board) const MINIBOARD_MOVE_COUNT_O:  u8 = 26;
     pub (in crate::board) const MOVE_COUNT_BIT_SIZE:     u8 = 0b1111;
 
-    pub const NEW_GAME:                                  u8 = u8::MAX;
+    //value that's > 9 but is (NEW_GAME + NEW_GAME * 9) < u8::MAX
+    pub const NEW_GAME:                                  u8 = 0;   
 
     pub const EMPTY:                                     u8 = 0;
     pub const X_PLAYER:                                  u8 = 1;
@@ -211,9 +229,10 @@ impl Board {
     //TODO: find better name than "corresponding"
     
     /// Returns the miniboard number that the next move should be played in
-    //#[inline]
+    #[inline(always)]
     pub fn move_corresponding_miniboard(row: u8, column: u8) -> u8 {
-        (column % 3) + (row % 3) * 3
+        MOVE_CORRESPONDING_MINIBOARD[((column + row * 9)) as usize]
+        //column % 3 + (row % 3 * 3)
     }
 
     // TODO: miniboard cells iterator?
@@ -255,6 +274,12 @@ impl Board {
         }
 
         statuses
+    }
+
+    pub fn get_miniboard_statuses_iter(&self) -> iterator::MiniboardStatusesIterator {
+        let bitfield = self.get_miniboard_statuses(); 
+
+        iterator::MiniboardStatusesIterator::new(bitfield)
     }
 }
 
