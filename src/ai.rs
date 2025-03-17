@@ -260,7 +260,9 @@ impl AI {
             }
         });
 
+        // PERF: filter_map currently with total move count is slower than no filtering
         for cells in active_miniboard_cells {
+        //for cells in (0..9).map(|mb| board.get_miniboard_cells(mb)) {
             // continuous_line/broken line patterns within miniboards
             for line in LINE_PATTERNS {
                 let mut pattern = 0u16;

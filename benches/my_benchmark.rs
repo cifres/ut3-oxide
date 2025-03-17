@@ -50,7 +50,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     let mut draws = 0u16;
     let mut losses = 0u16;
     let mut total_turns = 0u32;
-    let duration = std::time::Duration::from_secs(17);
+    let duration = std::time::Duration::from_secs(30);
 
     // group.sample_size(10).measurement_time(duration);
     group.measurement_time(duration);
