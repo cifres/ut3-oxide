@@ -32,6 +32,7 @@ pub struct MiniboardStatusesIterator {
     offset: u8,
 }
 
+#[allow(dead_code)]
 impl MiniboardStatusesIterator {
     pub fn new(bitfield: u32) -> Self {
         Self {

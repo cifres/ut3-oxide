@@ -75,10 +75,9 @@ fn winrate_benchmark(c: &mut Criterion) {
     let total = wins + losses + draws;
     let average_turns = total_turns as f32 / total as f32;
     let wr = (wins as f64 / total as f64) * 100.0;
-    println!("{total_turns}");
     println!(
         "wr @ depth {DEPTH}: {wr:.2}% -> (O) {wins}/{total}
-        — average total turns = {average_turns:.2} 
+        — average total turns = {average_turns:.2} of {total_turns} 
         — losses (X): {losses} draws: {draws}",
     );
 }
