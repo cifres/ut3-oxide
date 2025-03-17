@@ -34,15 +34,15 @@ const _MOVE_CORRESPONDING_MINIBOARD: [u8; 81] = {
 
 #[allow(dead_code)]
 pub mod flag {
-    pub const MINIBOARD_STATUS:                          u8 = 20;
+    pub const MINIBOARD_STATUS:                          u8 = 18;
     pub (in crate::board) const STATUS_BIT_SIZE:         u8 = 0b11;
     pub const STATUS_CONTESTABLE:                        u8 = 0;
     pub const STATUS_X_WIN:                              u8 = 1;
     pub const STATUS_O_WIN:                              u8 = 2;
     pub const STATUS_DRAW:                               u8 = 3;
 
-    pub (in crate::board) const MINIBOARD_MOVE_COUNT_X:  u8 = 22;
-    pub (in crate::board) const MINIBOARD_MOVE_COUNT_O:  u8 = 26;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_X:  u8 = 20;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_O:  u8 = 24;
     pub (in crate::board) const MOVE_COUNT_BIT_SIZE:     u8 = 0b1111;
 
     //value that's > 9 but is (NEW_GAME + NEW_GAME * 9) < u8::MAX
@@ -54,9 +54,11 @@ pub mod flag {
 }
 
 // TODO: add total move count field with empty final bits
+// Memoize mb check statuses?
 
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
+/// meta data bits `31–18` -- cells `17–0`
 /// `[14 bits meta data — 18 bits cell data]`
 ///     * `9` cells x `2` bits per cell = `18` bits 
 ///     * meta data `[0000 — 0000 — 0000 — 00]`
