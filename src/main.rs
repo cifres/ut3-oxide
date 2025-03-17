@@ -15,6 +15,7 @@ fn main() -> Result<(), std::io::Error> {
     board.do_move(2, 4, flag::O_PLAYER);
     let (row, column) = ai_x.calculate_move_par(&board, 7);
     board.do_move(row, column, flag::X_PLAYER);
+    // if arg length == 1 do single move otherwise ai vs ai
     //println!("{row}, {column}");
     //println!("{board:#}");
 
@@ -28,10 +29,11 @@ fn main() -> Result<(), std::io::Error> {
     //
     //    board.do_move(row, column, 1);
     //    let game_status = board.calculate_game_status();
-    //    if game_status != STATUS_CONTESTABLE {
+    //    if game_status != flag::STATUS_CONTESTABLE {
     //        println!("Game over: result {game_status}");
-    //        return Ok(());
+    //        break;
     //    }
+    //
     //    // println!("{board:#}");
     //    // ai move
     //    let (row, column) = ai_x.calculate_move_par(&board, 7);
@@ -45,9 +47,9 @@ fn main() -> Result<(), std::io::Error> {
     //    );
     //
     //    let game_status = board.calculate_game_status();
-    //    if game_status != STATUS_CONTESTABLE {
+    //    if game_status != flag::STATUS_CONTESTABLE {
     //        println!("Game over: result {game_status}");
-    //        return Ok(());
+    //        break;
     //    }
     //}
 

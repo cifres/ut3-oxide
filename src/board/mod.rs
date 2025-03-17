@@ -53,12 +53,15 @@ pub mod flag {
     pub const O_PLAYER:                                  u8 = 2;
 }
 
+// TODO: add total move count field with empty final bits
+
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
-/// `[14 bits meta data -- 18 bits cell data]`
-/// `9` cells x `2` bits per cell = `18` bits 
-/// meta data `4` bits empty -- move_count o `4` bits -- move_count x `4` bits -- miniboard_status `2` bits
-/// xo_miniboard_win_count: `[00 -- 000 -- 000]` -> `[empty -- O win count -- X win count]`
+/// `[14 bits meta data — 18 bits cell data]`
+///     * `9` cells x `2` bits per cell = `18` bits 
+///     * meta data `[0000 — 0000 — 0000 — 00]`
+///         * `4` bits empty — move_count o `4` bits — move_count x `4` bits — miniboard_status `2` bits
+/// xo_miniboard_win_count: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
 #[derive(Debug, Clone)]
 pub struct Board {
     pub main_board: [u32; 9],
@@ -263,6 +266,8 @@ impl Board {
         self.calculate_miniboard_status(miniboard);
 
     }
+
+    // TODO: look up table
 
     /// Returns the `miniboard` that `move` is in.
     /// # Example
