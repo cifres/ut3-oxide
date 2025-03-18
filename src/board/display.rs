@@ -46,7 +46,7 @@ impl fmt::Display for Board {
             for i in 0..self.main_board.len() {
                 writeln!(
                     f,
-                    "[{i}]: cells[{:18b}]-meta[{:14b}]",
+                    "[{i}]: cells[{:018b}] — meta[{:014b}]",
                     self.get_row_cells(i as u8),
                     self.main_board[i] >> 18
                 )?
