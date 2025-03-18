@@ -15,12 +15,12 @@ pub struct MoveHistory {
 
 impl MoveHistory {
     pub fn new() -> Self {
-        let mut move_row_affected = Vec::with_capacity(60);
-        let mut move_row_affected_index = Vec::with_capacity(60);
-        let mut miniboard_affected = Vec::with_capacity(60);
-        let mut miniboard_affected_index = Vec::with_capacity(60);
-        let mut last_move = Vec::with_capacity(60);
-        let mut xo_miniboard_win_count = Vec::with_capacity(60);
+        let mut move_row_affected = Vec::with_capacity(81);
+        let mut move_row_affected_index = Vec::with_capacity(81);
+        let mut miniboard_affected = Vec::with_capacity(81);
+        let mut miniboard_affected_index = Vec::with_capacity(81);
+        let mut last_move = Vec::with_capacity(81);
+        let mut xo_miniboard_win_count = Vec::with_capacity(81);
 
         move_row_affected.push(0);
         move_row_affected_index.push(0);
