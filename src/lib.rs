@@ -256,8 +256,9 @@ mod tests {
 
         // 9 moves is a draw but ensure priority to win checking
         // by changing last 3 rows to make x win and have 9 moves made 
-        board.set_player_move_count_of(miniboard, 3, 1);
-        board.set_player_move_count_of(miniboard, 3, 2);
+        //board.set_player_move_count_of(miniboard, 3, 1);
+        //board.set_player_move_count_of(miniboard, 3, 2);
+        board.set_total_move_count_of(miniboard, 6);
         board.set_status_of(miniboard, flag::STATUS_CONTESTABLE);
         board.do_move(8, 6, 1);
         board.do_move(8, 7, 2);
