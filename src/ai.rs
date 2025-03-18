@@ -271,7 +271,7 @@ impl AI {
                 // TODO: extract into resuable function which compares a u16 of 4 bit groups * 3
                 // patterns to ai/opponent patterns
                 for (i, (row, column)) in line.iter().enumerate() {
-                    let offset = (column + row * 3) * 2;
+                    let offset = (row * 3 + column) * 2;
                     let mask = 0b11 << offset;
                     let cell = ((cells & mask) >> offset) as u8;
 
