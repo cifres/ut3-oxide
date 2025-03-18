@@ -269,6 +269,10 @@ impl Board {
         debug_assert_ne!(player, 0, "'player' was 0! must be 1 or 2");
         let miniboard = Self::move_miniboard(row, column);
         
+        // take a snapshot of the relevant board state before the move
+        // so, when we undo to roll back the change
+        // we surgically alter the row of the move, and the miniboard affected which may be 
+        // on a different row, with the previous values
         self.move_history.add(
             self.main_board[row as usize], row,
             self.main_board[miniboard as usize], miniboard,
