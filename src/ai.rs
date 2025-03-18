@@ -104,9 +104,10 @@ impl AI {
             let mut score = i16::MIN;
             //for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
             for (row, column) in board.valid_moves() {
-                let mut board = board.clone();      //NOTE: hot
+                //let mut board = board.clone();      //NOTE: hot
                 board.do_move(row, column, self.ai_shape);
-                score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
+                score = score.max(self.alphabeta_mm(board, depth - 1, alpha, beta, false));
+                board.undo_move();
                 alpha = alpha.max(score);
                 if score >= beta {
                     break;
@@ -117,9 +118,9 @@ impl AI {
         } else {
             let mut score = i16::MAX;
             for (row, column) in board.valid_moves() {
-                let mut board = board.clone();
                 board.do_move(row, column, self.opponent_shape);
-                score = score.min(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, true));
+                score = score.min(self.alphabeta_mm(board, depth - 1, alpha, beta, true));
+                board.undo_move();
                 beta = beta.min(score);
                 if score <= alpha {
                     break;
