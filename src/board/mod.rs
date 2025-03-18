@@ -1,6 +1,7 @@
 pub mod rules;
 pub mod display;
 pub mod iterator;
+pub mod move_history;
 
 // TODO: move miniboard, move_corresponding_miniboard, miniboard_starting_coord lookup tables
 // miniboard 1d -> miniboard 2d:     mb // 3, mb % 3
@@ -70,6 +71,7 @@ pub struct Board {
     pub main_board: [u32; 9],
     pub (crate) last_move: (u8, u8),    // The last valid move that was made 
     pub (crate) xo_miniboard_win_count: u8,
+    move_history: move_history::MoveHistory,
 }
 
 impl Board {
@@ -86,6 +88,7 @@ impl Board {
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,
+            move_history: move_history::MoveHistory::new(),
         }
     }
 
@@ -107,6 +110,7 @@ impl Board {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
         self.xo_miniboard_win_count = 0;
+        self.move_history.reset();
     }
 
     /////* Cell Operations */////
@@ -263,18 +267,33 @@ impl Board {
         assert!(column < 9);
         assert!(player <= 2);
         debug_assert_ne!(player, 0, "'player' was 0! must be 1 or 2");
+        let miniboard = Self::move_miniboard(row, column);
+        
+        self.move_history.add(
+            self.main_board[row as usize], row,
+            self.main_board[miniboard as usize], miniboard,
+            self.last_move,
+            self.xo_miniboard_win_count,
+        );
 
         self.set_cell(row, column, player);
         self.last_move = (row, column);
 
-        let miniboard = Self::move_miniboard(row, column);
         let move_count = self.get_player_move_count_of(miniboard, player);
         debug_assert!(move_count <= 9);
 
         self.set_player_move_count_of(miniboard, move_count + 1, player);
         self.set_total_move_count_of(miniboard, self.get_total_move_count_of(miniboard) + 1);
         self.calculate_miniboard_status(miniboard);
+    }
 
+    pub fn undo_move(&mut self) {
+        if let Some((move_row, row_index, miniboard, miniboard_index, last_move, win_count)) = self.move_history.pop() {
+            self.main_board[row_index as usize] = move_row;
+            self.main_board[miniboard_index as usize] = miniboard;
+            self.last_move = last_move;
+            self.xo_miniboard_win_count = win_count;
+        }
     }
 
     // TODO: look up table
@@ -291,7 +310,7 @@ impl Board {
         debug_assert!(row < 9);
         debug_assert!(column < 9);
 
-        column / 3 + (row / 3) * 3  
+        (row / 3) * 3 + column / 3   
     }
 
     //TODO: find better name than "corresponding"
