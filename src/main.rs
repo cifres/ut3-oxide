@@ -7,24 +7,19 @@ use std::io::{self, Write};
 
 fn main() -> Result<(), std::io::Error> {
     let mut board = Board::new();
-    //let ai_o = AI::default();
-
-    //board.do_move(2, 4, flag::O_PLAYER);
-    //let (row, column) = ai_x.calculate_move_par(&board, 7);
-    //board.do_move(row, column, flag::X_PLAYER);
 
     let mut args = std::env::args();
     let _ = args.next();    // program name
     if args.len() == 0 {
         player_vs_ai(&mut board);
     } else {
-        ai_vs_ai(&mut board, &mut args);
+        ai_vs_ai(board, &mut args);
     }
 
     Ok(())
 }
 
-fn ai_vs_ai(board: &mut Board, args: &mut std::env::Args) {
+fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
     let depth_1: u8 = args
         .next()
         .expect("should've gotten arg for AI X")
@@ -41,7 +36,7 @@ fn ai_vs_ai(board: &mut Board, args: &mut std::env::Args) {
         .next()
         .expect("should've gotten number of iterations")
         .parse()
-        .expect("iterations should be a number between 0–65536");
+        .expect("iterations should be a number between 0–65535");
 
     let ai_x = AI::new(flag::X_PLAYER);
     let ai_o = AI::default();
@@ -54,7 +49,7 @@ fn ai_vs_ai(board: &mut Board, args: &mut std::env::Args) {
 
     for _ in 0..iterations {
         loop {
-            let (row, column) = ai_x.calculate_move_par(board, depth_1);
+            let (row, column) = ai_x.calculate_move_par(&board, depth_1);
             board.do_move(row, column, flag::X_PLAYER);
             total_turns += 1;
             let game_status = board.calculate_game_status();
@@ -64,7 +59,7 @@ fn ai_vs_ai(board: &mut Board, args: &mut std::env::Args) {
             }
 
             // ai move
-            let (row, column) = ai_o.calculate_move_par(board, depth_2);
+            let (row, column) = ai_o.calculate_move_par(&board, depth_2);
             board.do_move(row, column, 2);
             total_turns += 1;
 
@@ -148,18 +143,6 @@ fn player_vs_ai(board: &mut Board) {
         }
     }
 }
-
-//fn ask_depth() -> u8 {
-//    let mut depth = String::new();
-//    io::stdin()
-//        .read_line(&mut depth)
-//        .expect("couldn't read input depth");
-//
-//    depth
-//        .trim_end()
-//        .parse()
-//        .expect("should've parsed {depth} as a u8")
-//}
 
 fn _ask_move() -> (u8, u8) {
     print!("Enter a move as \"row col\" like \"4 3\": ");
