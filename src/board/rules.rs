@@ -1,4 +1,4 @@
-use super::{flag, Board, iterator::ValidMoveIterator};
+use super::{flag, iterator::ValidMoveIterator, Board};
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
     const ROW_LINE: [(u8, u8); 9] = const {
@@ -114,7 +114,8 @@ impl Board {
                 (corresponding_mb / 3 * 3, corresponding_mb % 3 * 3);
             for row in starting_row..starting_row + 3 {
                 for column in starting_column..starting_column + 3 {
-                    let valid = self.is_valid_move(row, column);
+                    //let valid = self.is_valid_move(row, column);
+                    let valid = self.get_cell(row, column) == flag::EMPTY;
                     let offset = column + row * 9;
                     moves_validity_bitfield |= (valid as u128) << offset;
                 }
@@ -158,13 +159,15 @@ impl Board {
         // Don't recheck/recalculate winning lines for an uncontestable (won/lost/drawn) miniboard
         // Remove to trigger recalculation for usage with AI do/undo move pattern
         // PERF: or just set mb status to contestable
+
+        assert!(miniboard < 9);
         if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
             //println!("nocalc cached {miniboard} as state {}", self.get_status_of(miniboard));
             return true;
         }
 
         let last_player = self.get_cell(self.last_move.0, self.last_move.1);
-        assert_ne!(last_player, flag::EMPTY);
+        debug_assert_ne!(last_player, flag::EMPTY);
 
         // early exit miniboards that cannot be won/lost/drawn yet.
         // equivalent to get_total_move_count_of < 3 but more accurate because it's impossible to
@@ -196,7 +199,7 @@ impl Board {
             // Create a mask to later get the cells for that winning line
             // Mask in those cells but as if X or O occupied those cells
             for (row, column) in line {
-                let offset = (column + row * 3) * 2;
+                let offset = (row * 3 + column) * 2;
                 line_mask |= 0b11 << offset;
                 xo_wonline |= (last_player as u32) << offset;
             }
@@ -211,10 +214,10 @@ impl Board {
             // Only X or O can win a miniboard which are represented by 1 and 2 respectively
             // with draw being 3
             debug_assert!(status < flag::STATUS_DRAW);
-            self.set_status_of(miniboard, status);
 
             // Short-circuit and return early if a winning line is matched
             if status > flag::STATUS_CONTESTABLE {
+                self.set_status_of(miniboard, status);
                 //println!("calc {miniboard} as {}", self.get_status_of(miniboard));
                 self.set_miniboard_win_count_of(
                     last_player,
@@ -240,6 +243,7 @@ impl Board {
     }
 
     // TODO: only check miniboards with move_count > 2
+
     // Compare against last player's move only for masking
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
