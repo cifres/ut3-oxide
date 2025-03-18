@@ -41,6 +41,10 @@ fn winrate_benchmark(c: &mut Criterion) {
         });
     });
 
+    group.bench_function("single-ai-v-ai-playout", |b| {
+        b.iter(ai_vs_ai);
+    });
+
     group.bench_function("single-playout", |b| {
         b.iter(ai_playout);
     });
@@ -71,6 +75,10 @@ fn winrate_benchmark(c: &mut Criterion) {
     });
 
     group.finish();
+
+    if total_turns == 0 {
+        return;
+    }
 
     let total = wins + losses + draws;
     let average_turns = total_turns as f32 / total as f32;
