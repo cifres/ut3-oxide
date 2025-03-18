@@ -34,23 +34,24 @@ const _MOVE_CORRESPONDING_MINIBOARD: [u8; 81] = {
 
 #[allow(dead_code)]
 pub mod flag {
-    pub const MINIBOARD_STATUS:                          u8 = 18;
-    pub (in crate::board) const STATUS_BIT_SIZE:         u8 = 0b11;
-    pub const STATUS_CONTESTABLE:                        u8 = 0;
-    pub const STATUS_X_WIN:                              u8 = 1;
-    pub const STATUS_O_WIN:                              u8 = 2;
-    pub const STATUS_DRAW:                               u8 = 3;
+    pub const MINIBOARD_STATUS:                             u8 = 18;
+    pub (in crate::board) const STATUS_BIT_SIZE:            u8 = 0b11;
+    pub const STATUS_CONTESTABLE:                           u8 = 0;
+    pub const STATUS_X_WIN:                                 u8 = 1;
+    pub const STATUS_O_WIN:                                 u8 = 2;
+    pub const STATUS_DRAW:                                  u8 = 3;
 
-    pub (in crate::board) const MINIBOARD_MOVE_COUNT_X:  u8 = 20;
-    pub (in crate::board) const MINIBOARD_MOVE_COUNT_O:  u8 = 24;
-    pub (in crate::board) const MOVE_COUNT_BIT_SIZE:     u8 = 0b1111;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_X:     u8 = 20;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_O:     u8 = 24;
+    pub (in crate::board) const MINIBOARD_MOVE_COUNT_TOTAL: u8 = 28;
+    pub (in crate::board) const MOVE_COUNT_BIT_SIZE:        u8 = 0b1111;
 
-    //value that's > 9 but is (NEW_GAME + NEW_GAME * 9) < u8::MAX
-    pub const NEW_GAME:                                  u8 = 0;   
+    //value that's > 9 but is (NEW_GAME + NEW_GAME * 9) < u8::MAX --  NOTE: not stable yet
+    pub const NEW_GAME:                                     u8 = 0;   
 
-    pub const EMPTY:                                     u8 = 0;
-    pub const X_PLAYER:                                  u8 = 1;
-    pub const O_PLAYER:                                  u8 = 2;
+    pub const EMPTY:                                        u8 = 0;
+    pub const X_PLAYER:                                     u8 = 1;
+    pub const O_PLAYER:                                     u8 = 2;
 }
 
 // TODO: add total move count field with empty final bits
@@ -205,7 +206,7 @@ impl Board {
     ///
     /// board.do_move(4, 3, 1);
     ///
-    /// let (miniboard, player) = (4, 2);
+    /// // miniboard 4, player 2
     /// assert_eq!(board.get_player_move_count_of(4, 2), 3);
     /// ```
     // NOTE: hot function
@@ -235,9 +236,15 @@ impl Board {
     /// Returns the total number of `moves` both `players` have made in a `miniboard`.
     //#[inline(always)]
     pub fn get_total_move_count_of(&self, miniboard: u8) -> u8 {
-        let x_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_X, flag::MOVE_COUNT_BIT_SIZE);
-        let o_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_O, flag::MOVE_COUNT_BIT_SIZE);
-        x_count + o_count
+        //let x_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_X, flag::MOVE_COUNT_BIT_SIZE);
+        //let o_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_O, flag::MOVE_COUNT_BIT_SIZE);
+        //x_count + o_count
+        self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_TOTAL, flag::MOVE_COUNT_BIT_SIZE)
+    }
+
+    pub fn set_total_move_count_of(&mut self, miniboard: u8, value: u8) {
+        // maps 1 => 22 and 2 => 26
+        self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_TOTAL, flag::MOVE_COUNT_BIT_SIZE, value); 
     }
     
     /////* Moves */////
@@ -262,9 +269,10 @@ impl Board {
 
         let miniboard = Self::move_miniboard(row, column);
         let move_count = self.get_player_move_count_of(miniboard, player);
-        assert!(move_count <= 9);
+        debug_assert!(move_count <= 9);
 
         self.set_player_move_count_of(miniboard, move_count + 1, player);
+        self.set_total_move_count_of(miniboard, self.get_total_move_count_of(miniboard) + 1);
         self.calculate_miniboard_status(miniboard);
 
     }
