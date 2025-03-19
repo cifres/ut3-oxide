@@ -58,6 +58,9 @@ pub mod flag {
 // TODO: add total move count field with empty final bits
 // Memoize mb check statuses?
 
+#[derive(Debug, Clone, Copy)]
+pub struct Move(u8, u8);
+
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
 /// meta data bits `31–18` -- cells `17–0`
@@ -88,6 +91,7 @@ impl Board {
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,
+            // TODO: factor out move_history
             move_history: move_history::MoveHistory::new(),
         }
     }
@@ -105,7 +109,6 @@ impl Board {
     /// board.reset();
     /// assert_eq!(board.get_cell(4, 4), 0);
     /// ```
-    #[allow(dead_code)]
     pub fn reset(&mut self) {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
@@ -273,11 +276,17 @@ impl Board {
         // so, when we undo to roll back the change
         // we surgically alter the row of the move, and the miniboard affected which may be 
         // on a different row, with the previous values
+        let (last_row, last_col) = self.last_move;
+        let last_move = Move(last_row, last_col);
+        let mb_move_count = (self.main_board[miniboard as usize] >> 20) as u16;
+
         self.move_history.add(
-            self.main_board[row as usize], row,
-            self.main_board[miniboard as usize], miniboard,
-            self.last_move,
-            self.xo_miniboard_win_count,
+            Move(row, column),
+            last_move,
+            miniboard,
+            self.get_status_of(miniboard),
+            mb_move_count,
+            self.xo_miniboard_win_count
         );
 
         self.set_cell(row, column, player);
@@ -292,11 +301,31 @@ impl Board {
     }
 
     pub fn undo_move(&mut self) {
-        if let Some((move_row, row_index, miniboard, miniboard_index, last_move, win_count)) = self.move_history.pop() {
-            self.main_board[row_index as usize] = move_row;
-            self.main_board[miniboard_index as usize] = miniboard;
-            self.last_move = last_move;
+        if let Some((
+            Move(row, column),
+            Move(last_row, last_col),
+            miniboard,
+            mb_status,
+            mb_move_count,
+            win_count
+        )) = self.move_history.pop()
+        {
+            self.set_cell(row, column, 0);
+            self.last_move = (last_row, last_col);
+            self.set_status_of(miniboard, mb_status);
             self.xo_miniboard_win_count = win_count;
+
+            // clear
+            let offset = 20;
+            let mask = (1 << 12) - 1;   // 0b1111_1111_1111;
+            let mut move_count = self.main_board[miniboard as usize];
+            move_count &= !(mask << offset);
+            
+            //set
+            move_count |= (mb_move_count as u32) << 20;
+
+            self.main_board[miniboard as usize] = move_count;
+            //println!("in undo after {:012b}", move_count);
         }
     }
 
