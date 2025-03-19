@@ -15,7 +15,7 @@ pub struct MoveHistory {
     xo_miniboard_win_count: [u8; 81],
 }
 
-//Surgically store the state that is about change including the affected cell,
+// Surgically store the state that is about change including the affected cell,
 // miniboard status & idx, player & total move count, last move, xo miniboard win count
 impl MoveHistory {
     pub fn new() -> Self {
@@ -58,17 +58,22 @@ impl MoveHistory {
     }
 
     // TODO: refactor into simpler type
+    // Ensure zeroed values return if we try to undo on the first move
     pub fn pop(&mut self) -> Option<(Move, Move, u8, u8, u16, u8)> {
         let i = self.i;
-        self.i -= 1;
-        Some((
-            self.cell[i as usize],
-            self.last_move[i as usize],
-            self.miniboard_index[i as usize],
-            self.miniboard_status[i as usize],
-            self.miniboard_move_count[i as usize],
-            self.xo_miniboard_win_count[i as usize],
-        ))
+        if i == 0 {
+            None
+        } else {
+            self.i -= 1;
+            Some((
+                self.cell[i as usize],
+                self.last_move[i as usize],
+                self.miniboard_index[i as usize],
+                self.miniboard_status[i as usize],
+                self.miniboard_move_count[i as usize],
+                self.xo_miniboard_win_count[i as usize],
+            ))
+        }
     }
 
     pub fn reset(&mut self) {
@@ -103,11 +108,11 @@ mod tests {
         board.undo_move();
         assert_eq!(board.main_board[4], 0b00010001000000_000000001000000000);
         assert_eq!(board.main_board[5], 0b0);
-        println!("{board}");
+        //println!("{board}");
 
         board.undo_move();
         assert_eq!(board.main_board[4], 0b0);
-        println!("2 moves\n{board}");
+        //println!("2 moves\n{board}");
 
         // multiple moves: different rows and miniboards
         /* undo winning move and continue */
@@ -127,15 +132,11 @@ mod tests {
         assert_eq!(board.calculate_game_status(), flag::STATUS_X_WIN);
 
         let wincount_before = board.get_miniboard_win_count_of(1);
-        println!("wc b4 = {wincount_before}");
+        //println!("{board}");
 
-        println!("{board}");
-        println!(
-            "outside and b4 undo {:012b}",
-            board.move_history.miniboard_move_count.last().unwrap()
-        );
         board.undo_move();
-        println!("{board}");
+
+        //println!("{board}");
         assert_eq!(board.calculate_game_status(), flag::STATUS_CONTESTABLE);
         assert_eq!(board.get_miniboard_win_count_of(1), wincount_before - 1);
         assert_eq!(board.get_status_of(2), 0);
@@ -168,5 +169,42 @@ mod tests {
         board.do_move(8, 1, 1);
         board.do_move(8, 2, 1);
         assert_eq!(board.get_status_of(6), 1);
+
+        // full
+        board.reset();
+        board.do_move(3, 0, 1);
+        board.do_move(3, 1, 1);
+        board.do_move(3, 2, 1);
+
+        board.do_move(3, 3, 1);
+        board.do_move(3, 4, 1);
+        board.do_move(3, 5, 1);
+
+        board.do_move(3, 6, 1);
+        board.do_move(3, 7, 1);
+        board.do_move(3, 8, 1);
+
+        assert_eq!(board.calculate_game_status(), flag::STATUS_X_WIN);
+
+        board.undo_move();
+        assert_eq!(board.calculate_game_status(), flag::STATUS_CONTESTABLE);
+
+        (0..8).for_each(|_| board.undo_move());
+
+        assert_eq!(board.last_move, (0, 0));
+        assert_eq!(board.xo_miniboard_win_count, 0);
+        assert_eq!(board.main_board.iter().sum::<u32>(), 0);
+
+        // try undoing more than moves have been made
+        board.undo_move();
+        board.undo_move();
+        board.undo_move();
+        assert_eq!(board.main_board.iter().sum::<u32>(), 0);
+
+        // then make moves again
+        board.do_move(8, 8, 2);
+        board.do_move(8, 7, 2);
+        board.do_move(8, 6, 2);
+        assert_eq!(board.get_status_of(8), 2);
     }
 }
