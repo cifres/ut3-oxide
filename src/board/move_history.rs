@@ -1,94 +1,78 @@
-use std::hint;
+use super::Move;
 
 /// Stores the `Board`'s history of moves
 /// This enables undoing moves.
 /// Uses separate arrays/vecs to track the row affected, and its index.
+/// Snapshots the relevant board state immediately before `board.do_move` to surgically revert changes
 #[derive(Debug, Clone)]
 pub struct MoveHistory {
-    move_row_affected: Vec<u32>,
-    move_row_affected_index: Vec<u8>,
-    miniboard_affected: Vec<u32>,
-    miniboard_affected_index: Vec<u8>,
-    last_move: Vec<(u8, u8)>,
-    xo_miniboard_win_count: Vec<u8>,
+    i: u8,
+    cell: [Move; 81],
+    last_move: [Move; 81],
+    miniboard_index: [u8; 81],
+    miniboard_status: [u8; 81],
+    miniboard_move_count: [u16; 81], // both x/o player, and total counts
+    xo_miniboard_win_count: [u8; 81],
 }
 
+//Surgically store the state that is about change including the affected cell,
+// miniboard status & idx, player & total move count, last move, xo miniboard win count
 impl MoveHistory {
     pub fn new() -> Self {
-        let mut move_row_affected = Vec::with_capacity(60);
-        let mut move_row_affected_index = Vec::with_capacity(60);
-        let mut miniboard_affected = Vec::with_capacity(60);
-        let mut miniboard_affected_index = Vec::with_capacity(60);
-        let mut last_move = Vec::with_capacity(60);
-        let mut xo_miniboard_win_count = Vec::with_capacity(60);
-
-        move_row_affected.push(0);
-        move_row_affected_index.push(0);
-        miniboard_affected.push(0);
-        miniboard_affected_index.push(0);
-        last_move.push((0, 0));
-        xo_miniboard_win_count.push(0);
+        //let mut cell = Vec::with_capacity(81);
+        let cell = [Move(0, 0); 81];
+        let last_move = [Move(0, 0); 81];
+        let miniboard_index = [0; 81];
+        let miniboard_status = [0; 81];
+        let miniboard_move_count = [0; 81];
+        let xo_miniboard_win_count = [0; 81];
 
         Self {
-            move_row_affected,
-            move_row_affected_index,
-            miniboard_affected,
-            miniboard_affected_index,
+            i: 0,
+            cell,
             last_move,
+            miniboard_index,
+            miniboard_status,
+            miniboard_move_count,
             xo_miniboard_win_count,
         }
     }
 
     pub fn add(
         &mut self,
-        move_row: u32,
-        row_index: u8,
-        miniboard_row: u32,
-        miniboard_index: u8,
-        last_move: (u8, u8),
-        win_count: u8,
+        cell: Move,
+        last_move: Move,
+        mb_index: u8,
+        mb_status: u8,
+        mb_move_count: u16,
+        xo_mb_win_count: u8,
     ) {
-        self.move_row_affected.push(move_row);
-        self.move_row_affected_index.push(row_index);
-        self.miniboard_affected.push(miniboard_row);
-        self.miniboard_affected_index.push(miniboard_index);
-        self.last_move.push(last_move);
-        self.xo_miniboard_win_count.push(win_count);
+        self.i += 1;
+
+        self.cell[self.i as usize] = cell;
+        self.last_move[self.i as usize] = last_move;
+        self.miniboard_index[self.i as usize] = mb_index;
+        self.miniboard_status[self.i as usize] = mb_status;
+        self.miniboard_move_count[self.i as usize] = mb_move_count;
+        self.xo_miniboard_win_count[self.i as usize] = xo_mb_win_count;
     }
 
     // TODO: refactor into simpler type
-    pub fn pop(&mut self) -> Option<(u32, u8, u32, u8, (u8, u8), u8)> {
-        let row = self.move_row_affected.pop();
-        let row_index = self.move_row_affected_index.pop();
-        let miniboard = self.miniboard_affected.pop();
-        let miniboard_index = self.miniboard_affected_index.pop();
-        let last_move = self.last_move.pop();
-        let win_count = self.xo_miniboard_win_count.pop();
-
+    pub fn pop(&mut self) -> Option<(Move, Move, u8, u8, u16, u8)> {
+        let i = self.i;
+        self.i -= 1;
         Some((
-            row?,
-            row_index?,
-            miniboard?,
-            miniboard_index?,
-            last_move?,
-            win_count?,
+            self.cell[i as usize],
+            self.last_move[i as usize],
+            self.miniboard_index[i as usize],
+            self.miniboard_status[i as usize],
+            self.miniboard_move_count[i as usize],
+            self.xo_miniboard_win_count[i as usize],
         ))
     }
 
     pub fn reset(&mut self) {
-        self.move_row_affected.clear();
-        self.move_row_affected_index.clear();
-        self.miniboard_affected.clear();
-        self.miniboard_affected_index.clear();
-        self.last_move.clear();
-        self.xo_miniboard_win_count.clear();
-
-        self.move_row_affected.push(0);
-        self.move_row_affected_index.push(0);
-        self.miniboard_affected.push(0);
-        self.miniboard_affected_index.push(0);
-        self.last_move.push((0, 0));
-        self.xo_miniboard_win_count.push(0);
+        self.i = 0;
     }
 }
 
@@ -126,9 +110,6 @@ mod tests {
         println!("2 moves\n{board}");
 
         // multiple moves: different rows and miniboards
-        //board.do_move(4, 3, 2);
-        //board.do_move(4, 3, 2);
-
         /* undo winning move and continue */
         board.set_status_of(0, 1);
         board.set_status_of(1, 1);
@@ -137,22 +118,32 @@ mod tests {
         board.do_move(2, 7, 1);
         board.do_move(2, 8, 1);
 
+        assert_eq!(board.get_status_of(0), 1);
+        assert_eq!(board.get_status_of(1), 1);
+        assert_eq!(board.get_status_of(2), 1);
+
         assert_eq!(board.get_player_move_count_of(2, 1), 3);
-        assert_eq!(board.get_total_move_count_of(2), 3);
         assert_eq!(board.get_total_move_count_of(2), 3);
         assert_eq!(board.calculate_game_status(), flag::STATUS_X_WIN);
 
         let wincount_before = board.get_miniboard_win_count_of(1);
+        println!("wc b4 = {wincount_before}");
 
+        println!("{board}");
+        println!("outside and b4 undo {:012b}", board.move_history.miniboard_move_count.last().unwrap());
         board.undo_move();
+        println!("{board}");
         assert_eq!(board.calculate_game_status(), flag::STATUS_CONTESTABLE);
         assert_eq!(board.get_miniboard_win_count_of(1), wincount_before - 1);
+        assert_eq!(board.get_status_of(2), 0);
+        assert_eq!(board.get_total_move_count_of(2), 2);
+        assert_eq!(board.get_player_move_count_of(2, 1), 2);
 
         /* interlaced do/undo moves */
-        assert_ne!(board.move_history.miniboard_affected.len(), 0);
+        assert_ne!(board.move_history.i, 0);
         board.reset();
-        assert_eq!(board.move_history.miniboard_affected.len(), 1);
-        assert_eq!(board.move_history.last_move[0].0, flag::NEW_GAME);
+        assert_eq!(board.move_history.i, 0);
+        //assert_eq!(board.move_history.last_move[0].0, flag::NEW_GAME);
 
         board.do_move(7, 0, 2);
         assert_eq!(board.get_cell(7, 0), 2);
@@ -161,6 +152,7 @@ mod tests {
 
         board.do_move(7, 0, 1);
         board.do_move(7, 1, 1);
+        board.do_move(7, 2, 1);
         board.undo_move();
 
         board.do_move(7, 1, 2);
