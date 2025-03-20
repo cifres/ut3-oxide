@@ -2,14 +2,14 @@ mod ai;
 mod board;
 
 use ai::AI;
-use board::{flag, move_history::MoveHistory, Board};
+use board::{flag, Board};
 use std::io::{self, Write};
 
 fn main() -> Result<(), std::io::Error> {
-    let mut board = Board::new(Some(MoveHistory::new()));
+    let mut board = Board::new(true);
 
     let mut args = std::env::args();
-    let _ = args.next();    // program name
+    _ = args.next();    // program name
     if args.len() == 0 {
         player_vs_ai(&mut board);
     } else {

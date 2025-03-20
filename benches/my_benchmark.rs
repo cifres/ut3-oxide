@@ -3,7 +3,7 @@ use rand::prelude::*;
 
 use ut3_oxide::{
     ai::AI,
-    board::{flag, move_history::MoveHistory, Board},
+    board::{flag, Board},
 };
 
 const DEPTH: u8 = 5;
@@ -12,7 +12,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("AI-performance");
 
     // single call speed
-    let mut board = Board::new(Some(MoveHistory::new()));
+    let mut board = Board::new(true);
     //let mut board = Board::default();
     let ai = AI::default();
     let rng = rand::prelude::SmallRng::seed_from_u64(7);
@@ -23,7 +23,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     // 246.42 μs @ depth 5
     // 211.28 μs @ depth 5 inline only no (always)
     // 362.29 μs @ depth 5 mixed
-    // 125.14 μs @ depth 5 
+    // 125.14 μs @ depth 5
     // 124.14 μs @ depth 5 -- current best
     group.bench_function("single-call-performance", |b| {
         b.iter(|| {
@@ -163,8 +163,7 @@ fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
 }
 
 fn ai_playout() -> (u8, u8) {
-    let history = MoveHistory::new();
-    let mut board = Board::new(Some(history));
+    let mut board = Board::new(true);
     //let mut board = Board::default();
     let ai = AI::default();
     let mut turns = 0;
