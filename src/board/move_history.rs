@@ -1,5 +1,4 @@
-use super::Move;
-
+type Move = (u8, u8);
 /// Stores the `Board`'s history of moves
 /// This enables undoing moves.
 /// Uses separate arrays/vecs to track the row affected, and its index.
@@ -19,9 +18,8 @@ pub struct MoveHistory {
 // miniboard status & idx, player & total move count, last move, xo miniboard win count
 impl MoveHistory {
     pub fn new() -> Self {
-        //let mut cell = Vec::with_capacity(81);
-        let cell = [Move(0, 0); 81];
-        let last_move = [Move(0, 0); 81];
+        let cell = [(0, 0); 81];
+        let last_move = [(0, 0); 81];
         let miniboard_index = [0; 81];
         let miniboard_status = [0; 81];
         let miniboard_move_count = [0; 81];
@@ -89,11 +87,13 @@ impl Default for MoveHistory {
 
 #[cfg(test)]
 mod tests {
+    pub use super::MoveHistory;
     use super::super::{flag, Board};
 
     #[test]
     fn undo_move() {
-        let mut board = Board::new();
+        let history = MoveHistory::new();
+        let mut board = Board::new(Some(history));
 
         /* 2 moves: same row, but 2 miniboards of 4 and 5 */
         board.do_move(4, 4, 2);
@@ -101,7 +101,7 @@ mod tests {
         assert_eq!(board.main_board[4], 0b000010001000000100000001000000000);
         assert_eq!(board.main_board[5], 0b10001000000 << 18);
 
-        // equivalent to
+        // partially equivalent to
         assert_eq!(board.get_player_move_count_of(4, 2), 1);
         assert_eq!(board.get_player_move_count_of(5, 2), 1);
 
@@ -144,9 +144,9 @@ mod tests {
         assert_eq!(board.get_player_move_count_of(2, 1), 2);
 
         /* interlaced do/undo moves */
-        assert_ne!(board.move_history.i, 0);
+        assert_ne!(board.move_history.as_ref().unwrap().i, 0);
         board.reset();
-        assert_eq!(board.move_history.i, 0);
+        assert_eq!(board.move_history.as_ref().unwrap().i, 0);
         //assert_eq!(board.move_history.last_move[0].0, flag::NEW_GAME);
 
         board.do_move(7, 0, 2);
@@ -189,7 +189,9 @@ mod tests {
         board.undo_move();
         assert_eq!(board.calculate_game_status(), flag::STATUS_CONTESTABLE);
 
-        (0..8).for_each(|_| board.undo_move());
+        for _ in 0..8 {
+            board.undo_move()
+        }
 
         assert_eq!(board.last_move, (0, 0));
         assert_eq!(board.xo_miniboard_win_count, 0);

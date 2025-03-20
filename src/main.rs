@@ -2,11 +2,11 @@ mod ai;
 mod board;
 
 use ai::AI;
-use board::{flag, Board};
+use board::{flag, move_history::MoveHistory, Board};
 use std::io::{self, Write};
 
 fn main() -> Result<(), std::io::Error> {
-    let mut board = Board::new();
+    let mut board = Board::new(Some(MoveHistory::new()));
 
     let mut args = std::env::args();
     let _ = args.next();    // program name
@@ -110,7 +110,11 @@ fn player_vs_ai(board: &mut Board) {
     println!("{board:#}");
 
     loop {
-        let (row, column) = _ask_move();
+        let Some((row, column)) = ask_move(board) else { 
+            println!("{board:#}");
+            continue;
+        };
+
         if !board.is_valid_move(row, column) {
             println!("{board:#}");
             println!("invalid!");
@@ -144,7 +148,7 @@ fn player_vs_ai(board: &mut Board) {
     }
 }
 
-fn _ask_move() -> (u8, u8) {
+fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
     print!("Enter a move as \"row col\" like \"4 3\": ");
     let _ = io::stdout().flush();
 
@@ -152,13 +156,25 @@ fn _ask_move() -> (u8, u8) {
     io::stdin()
         .read_line(&mut input)
         .expect("Couldn't get the input");
-
+    
+    let input = input.trim_end();
+    if input == "u" {
+        // undo twice for the AI and the player 
+        board.undo_move();
+        board.undo_move();
+        return None;
+    } else if input == "r" {
+        board.reset();
+        return None;
+    } else if input == "q" {
+        std::process::exit(0);
+    }
     //println!("\n{input}");
 
-    let moves = input
+    let [row, col] = input
         .split_whitespace()
         .map(|sn| sn.parse().expect("Should have parsed the number {sn}"))
-        .collect::<Vec<u8>>();
+        .collect::<Vec<u8>>()[..] else { todo!() };
 
-    (moves[0], moves[1])
+    Some((row, col))
 }

@@ -15,7 +15,9 @@ const MINIBOARD_WIN_COUNT: i16 = 4;
 const CENTRE_MB_CONTROL: i16 = 5;
 const UNCONESTABLE_MB_POINTING: i16 = 2;
 const NEAR_WON_LINES: i16 = 2;
-const NEAR_WON_MB_LINES: i16 = 1; // TODO: split usage into continuous and broken
+const NEAR_WON_MB_LINES: i16 = 1;
+// TODO: split usage into continuous and broken and value continuous more
+
 //const CONTINUOUS_MB_LINES: i16 = 1;
 //const BROKEN_MB_LINES: i16 = 1;
 
@@ -40,7 +42,7 @@ const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
     combined
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct AI {
     ai_shape: u8,
     opponent_shape: u8,
@@ -77,8 +79,6 @@ impl AI {
                 let mut board = board.clone();
                 board.do_move(row, column, self.ai_shape);
                 let score = self.alphabeta_mm(&mut board, depth - 1, i16::MIN, i16::MAX, false);
-                //println!("{score} {row}, {column}");
-                // undo move instead of clone
                 (score, (row, column))
             })
             .max_by_key(|(score, (_, _))| *score);
@@ -102,12 +102,12 @@ impl AI {
 
         if is_max {
             let mut score = i16::MIN;
-            //for (row, column) in ValidMoveIterator::new(board.valid_moves_bitfield()) {
             for (row, column) in board.valid_moves() {
-                //let mut board = board.clone();      //NOTE: hot
+                let mut board = board.clone();      //NOTE: hot
                 board.do_move(row, column, self.ai_shape);
-                score = score.max(self.alphabeta_mm(board, depth - 1, alpha, beta, false));
-                board.undo_move();
+                score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
+                //score = score.max(self.alphabeta_mm(board, depth - 1, alpha, beta, false));
+                //board.undo_move();
                 alpha = alpha.max(score);
                 if score >= beta {
                     break;
@@ -118,9 +118,11 @@ impl AI {
         } else {
             let mut score = i16::MAX;
             for (row, column) in board.valid_moves() {
+                let mut board = board.clone();
                 board.do_move(row, column, self.opponent_shape);
-                score = score.min(self.alphabeta_mm(board, depth - 1, alpha, beta, true));
-                board.undo_move();
+                score = score.min(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, true));
+                //score = score.min(self.alphabeta_mm(board, depth - 1, alpha, beta, true));
+                //board.undo_move();
                 beta = beta.min(score);
                 if score <= alpha {
                     break;
@@ -383,7 +385,7 @@ impl AI {
 #[test]
 fn ai_evaluate() {
     let ai = AI::default();
-    let mut board = Board::new();
+    let mut board = Board::default();
     board.do_move(3, 0, 2);
 
     let score = ai.evaluate(&board);
@@ -497,7 +499,7 @@ fn ai_evaluate() {
 
 #[test]
 fn ai_minimax() {
-    // let mut board = Board::new();
+    // let mut board = Board::default();
     // let ai = AI::default();
     //
     // board.do_move(2, 4, 1);
@@ -508,7 +510,7 @@ fn ai_minimax() {
 
 #[test]
 fn cells_int() {
-    let mut board = Board::new();
+    let mut board = Board::default();
     let aix = AI::default();
 
     board.do_move(4, 4, 1);

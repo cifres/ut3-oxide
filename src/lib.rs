@@ -8,7 +8,7 @@ mod tests {
 
     #[test]
     fn set_meta_data() {
-        let mut board = Board::new();
+        let mut board = Board::default();
 
         board.do_move(3, 3, 1);
         board.do_move(3, 4, 1);
@@ -121,7 +121,7 @@ mod tests {
 
     #[test]
     fn get_cells() {
-        let mut board = Board::new();
+        let mut board = Board::default();
 
         // fill miniboard 4 by filling rows and columns 3, 4, and 5.
         board.set_cell(3, 3, 1);
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn check_miniboard_status() {
-        let mut board = Board::new();
+        let mut board = Board::default();
 
         /* row-wise horizontal line: 0 */
         board.do_move(0, 0, 2);
@@ -322,7 +322,7 @@ mod tests {
 
     #[test]
     fn get_game_status() {
-        let mut board = Board::new();
+        let mut board = Board::default();
         let ai = AI::default();
 
         // x win -- miniboards 3, 4, 5 
@@ -426,7 +426,7 @@ mod tests {
 
     #[test]
     fn miniboard_win_count() {
-        let mut board = Board::new();
+        let mut board = Board::default();
 
         let xwincount = board.get_miniboard_win_count_of(1);
         let owincount = board.get_miniboard_win_count_of(2);
@@ -456,7 +456,7 @@ mod tests {
 
     #[test]
     fn valid_move_iter() {
-        let mut board = Board::new();
+        let mut board = Board::default();
 
         let bitfield = board.valid_moves_bitfield();
         let valid = iterator::ValidMoveIterator::new(bitfield);
@@ -477,7 +477,7 @@ mod tests {
     #[test]
     fn mb_status_iter() {
         use iterator::MiniboardStatusesIterator;
-        let mut board = Board::new();
+        let mut board = Board::default();
 
         board.set_status_of(0, 2);
         board.set_status_of(4, 2);
