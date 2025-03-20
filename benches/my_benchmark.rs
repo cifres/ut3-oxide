@@ -23,7 +23,8 @@ fn winrate_benchmark(c: &mut Criterion) {
     // 246.42 μs @ depth 5
     // 211.28 μs @ depth 5 inline only no (always)
     // 362.29 μs @ depth 5 mixed
-    // 125.14 μs @ depth 5 -- current best
+    // 125.14 μs @ depth 5 
+    // 124.14 μs @ depth 5 -- current best
     group.bench_function("single-call-performance", |b| {
         b.iter(|| {
             ai.calculate_move_par(&board, DEPTH);
