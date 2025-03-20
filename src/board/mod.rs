@@ -3,6 +3,8 @@ pub mod display;
 pub mod iterator;
 pub mod move_history;
 
+use move_history::MoveHistory;
+
 // TODO: move miniboard, move_corresponding_miniboard, miniboard_starting_coord lookup tables
 // miniboard 1d -> miniboard 2d:     mb // 3, mb % 3
 // miniboard -> starting_coord:      mb // 3 * 3, mb % 3 * 3
@@ -58,9 +60,6 @@ pub mod flag {
 // TODO: add total move count field with empty final bits
 // Memoize mb check statuses?
 
-#[derive(Debug, Clone, Copy)]
-pub struct Move(u8, u8);
-
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
 /// meta data bits `31–18` -- cells `17–0`
@@ -69,39 +68,58 @@ pub struct Move(u8, u8);
 ///     * meta data `[0000 — 0000 — 0000 — 00]`
 ///         * `4` bits empty — move_count o `4` bits — move_count x `4` bits — miniboard_status `2` bits
 /// xo_miniboard_win_count: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Board {
     pub main_board: [u32; 9],
     pub (crate) last_move: (u8, u8),    // The last valid move that was made 
     pub (crate) xo_miniboard_win_count: u8,
-    move_history: move_history::MoveHistory,
+    pub move_history: Option<MoveHistory>,
+}
+
+impl Clone for Board {
+    /// Clones the `Board` apart from the `move_history`.
+    /// move_history is an expensive clone thus, if you wish to clone it too
+    /// use `clone_with_history`
+    fn clone(&self) -> Self {
+        Self {
+            main_board: self.main_board,
+            last_move: self.last_move,
+            xo_miniboard_win_count: self.xo_miniboard_win_count,
+            move_history: None
+            //move_history: self.move_history.clone()
+        }
+    }
 }
 
 impl Board {
 
-    /// Creates a new, empty `Board`.
+    /// Creates a new, empty `Board` with or without move history.
     /// 
     /// # Example
     /// ```
-    /// # use ut3_oxide::board::Board;
-    /// let mut board = Board::new();
+    /// use ut3_oxide::board::Board;
+    /// use ut3_oxide::board::move_history::MoveHistory;
+    ///
+    /// let history = Some(MoveHistory::new());
+    /// let mut board_with_history = Board::new(history);
+    /// let mut board_without = Board::new(None);
     /// ```
-    pub fn new() -> Self {
+    pub fn new(move_history: Option<MoveHistory>) -> Self {
         Board { 
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,
             // TODO: factor out move_history
-            move_history: move_history::MoveHistory::new(),
+            move_history,
         }
     }
 
-    /// Resets and zeroes the state of `Board`, as if a `new` Board was initialised.
+    /// Resets and zeroes the state of `Board::default` Board was initialised.
     ///
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
-    /// # let mut board = Board::new();
+    /// # let mut board = Board::default();
     /// board.do_move(4, 4, 1);
     /// assert_eq!(board.get_cell(4, 4), 1);
     ///
@@ -113,7 +131,14 @@ impl Board {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
         self.xo_miniboard_win_count = 0;
-        self.move_history.reset();
+        if let Some(ref mut move_history) = &mut self.move_history {
+            move_history.reset();
+        }
+    }
+
+    // TODO: clone_with_history method for AI vs player
+    pub fn _clone_with_history(&self) -> Self {
+        todo!()
     }
 
     /////* Cell Operations */////
@@ -206,7 +231,7 @@ impl Board {
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
-    /// let mut board = Board::new();
+    /// let mut board = Board::default();
     /// board.do_move(4, 4, 2);
     /// board.do_move(4, 5, 2);
     /// board.do_move(3, 5, 2);
@@ -261,7 +286,7 @@ impl Board {
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
-    /// let mut board = Board::new();
+    /// let mut board = Board::default();
     /// board.do_move(4, 4, 2);
     /// assert_eq!(board.get_cell(4, 4), 2);
     /// ```
@@ -276,18 +301,19 @@ impl Board {
         // so, when we undo to roll back the change
         // we surgically alter the row of the move, and the miniboard affected which may be 
         // on a different row, with the previous values
-        let (last_row, last_col) = self.last_move;
-        let last_move = Move(last_row, last_col);
-        let mb_move_count = (self.main_board[miniboard as usize] >> 20) as u16;
+        if self.move_history.is_some() {
+            let mb_move_count = (self.main_board[miniboard as usize] >> 20) as u16;
+            let mb_status = self.get_status_of(miniboard);
 
-        self.move_history.add(
-            Move(row, column),
-            last_move,
-            miniboard,
-            self.get_status_of(miniboard),
-            mb_move_count,
-            self.xo_miniboard_win_count
-        );
+            self.move_history.as_mut().unwrap().add(
+                (row, column),
+                self.last_move,
+                miniboard,
+                mb_status,
+                mb_move_count,
+                self.xo_miniboard_win_count
+            )
+        }
 
         self.set_cell(row, column, player);
         self.last_move = (row, column);
@@ -302,13 +328,13 @@ impl Board {
 
     pub fn undo_move(&mut self) {
         if let Some((
-            Move(row, column),
-            Move(last_row, last_col),
+            (row, column),
+            (last_row, last_col),
             miniboard,
             mb_status,
             mb_move_count,
             win_count
-        )) = self.move_history.pop()
+        )) = self.move_history.as_mut().unwrap().pop()
         {
             self.set_cell(row, column, 0);
             self.last_move = (last_row, last_col);
@@ -367,7 +393,7 @@ impl Board {
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
-    /// # let mut board = Board::new();
+    /// # let mut board = Board::default();
     /// board.do_move(0, 0, 1);
     /// board.do_move(0, 1, 2);
     /// board.do_move(0, 2, 1);
@@ -404,7 +430,7 @@ impl Board {
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
-    /// # let mut board = Board::new();
+    /// # let mut board = Board::default();
     /// board.set_status_of(1, 1);
     /// board.set_status_of(4, 1);
     /// board.set_status_of(8, 2);
@@ -433,7 +459,7 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Self::new()
+        Self::new(None)
     }
 }
 
@@ -441,7 +467,7 @@ impl Default for Board {
 // TODO: move all tests to right place
 #[test]
 fn statusesmb() {
-    let mut board = Board::new();
+    let mut board = Board::default();
     board.set_status_of(0, 2);
     board.set_status_of(1, 1);
     board.set_status_of(2, 2);
@@ -453,7 +479,7 @@ fn statusesmb() {
 
 #[test]
 fn get_miniboard_cells_v2() {
-    let mut board = Board::new();
+    let mut board = Board::default();
     board.set_cell(3, 3, 1);
     board.set_cell(3, 4, 2);
     board.set_cell(3, 5, 2);
