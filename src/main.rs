@@ -171,7 +171,7 @@ fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
     }
     //println!("\n{input}");
 
-    let [row, col] = input
+    let [row, col, ..] = input
         .split_whitespace()
         .map(|sn| sn.parse().expect("Should have parsed the number {sn}"))
         .collect::<Vec<u8>>()[..] else { todo!() };
