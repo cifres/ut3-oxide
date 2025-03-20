@@ -100,17 +100,19 @@ impl Board {
     /// use ut3_oxide::board::Board;
     /// use ut3_oxide::board::move_history::MoveHistory;
     ///
-    /// let history = Some(MoveHistory::new());
-    /// let mut board_with_history = Board::new(history);
-    /// let mut board_without = Board::new(None);
+    /// let mut board_with_history = Board::new(true);
+    /// let mut board_without = Board::new(false);
     /// ```
-    pub fn new(move_history: Option<MoveHistory>) -> Self {
+    pub fn new(track_move_history: bool) -> Self {
         Board { 
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,
-            // TODO: factor out move_history
-            move_history,
+            move_history: if track_move_history {
+                Some(MoveHistory::new())
+            } else {
+                None 
+            },
         }
     }
 
@@ -459,7 +461,12 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Self::new(None)
+        Self { 
+            main_board: [0; 9],
+            last_move: (flag::NEW_GAME, flag::NEW_GAME),
+            xo_miniboard_win_count: 0,
+            move_history: None
+        }
     }
 }
 

@@ -13,6 +13,7 @@ impl Board {
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // print the board with Xs and Os
+        // (board:#)
         if f.alternate() {
             for row in 0..9 {
                 for column in 0..9 {
