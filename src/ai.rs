@@ -205,7 +205,7 @@ impl AI {
 
             let mut cells = Vec::with_capacity(9);
             //let mut cells_int = 0u32;
-            let (mb_row, mb_col) = ((mb_status / 3), (mb_status % 3)); 
+            let (mb_row, mb_col) = ((mb_status / 3), (mb_status % 3));
             // TODO: use step_by to do it row by row instead of cell by cell
             // 0..9 -> step_by 3 -> row 1 col 1 | 4 | 7 ...
             // TODO: consider packing into a u32
@@ -224,7 +224,7 @@ impl AI {
 
             //println!("{mb_status} -> {cells_int}");
             //println!("{cells:?} vs {cells_int:032b}");
-            Some(cells) 
+            Some(cells)
             //Some(cells_int)
         });
 
@@ -254,7 +254,7 @@ impl AI {
         }
 
         // for every active miniboard, get its cells and check for near won patterns
-        // NOTE: hot: this loop 
+        // NOTE: hot: this loop
         let active_miniboard_cells = (0..9).filter_map(|miniboard| {
             if board.get_total_move_count_of(miniboard) > 0 {
                 Some(board.get_miniboard_cells(miniboard))
@@ -363,8 +363,8 @@ impl AI {
 
             let opp_used_free = (((first == self.opponent_shape) as u8)
                 + ((middle == self.opponent_shape) as u8)
-                + ((end == self.opponent_shape) as u8)) as i16; 
-            
+                + ((end == self.opponent_shape) as u8)) as i16;
+
             //println!("")
             score += (ai_used_free - opp_used_free) * SCORE_UNIT * CELL_CORRESPONDING_SAME_MB;
         }
@@ -375,7 +375,7 @@ impl AI {
         } else if game_status == self.ai_shape {
             score = i16::MAX;
         }
-        
+
         // println!("final {score}");
 
         score
