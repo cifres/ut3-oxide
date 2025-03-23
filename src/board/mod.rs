@@ -8,14 +8,14 @@ use move_history::MoveHistory;
 // TODO: move miniboard, move_corresponding_miniboard, miniboard_starting_coord lookup tables
 // miniboard 1d -> miniboard 2d:     mb // 3, mb % 3
 // miniboard -> starting_coord:      mb // 3 * 3, mb % 3 * 3
-// move -> miniboard:                row // 3 * 3 + column 
+// move -> miniboard:                row // 3 * 3 + column
 // move -> corresponding mb:        (column % 3) + (row % 3) * 3
-// miniboard -> corresponding cells: 
+// miniboard -> corresponding cells:
 // mb 1, 2 (5) <- row * 3, col
 //  (1, 2) (1, 5) (1, 8)
 //  (4, 2) (4, 5) (4, 8)
 //  (7, 2) (7, 5) (7, 8)
-// mb -> (mb // 3) + (row * 3), (mb % 3) + col * 3 
+// mb -> (mb // 3) + (row * 3), (mb % 3) + col * 3
 
 const _MOVE_CORRESPONDING_MINIBOARD: [u8; 81] = {
     let mut a = [0u8; 81];
@@ -50,7 +50,7 @@ pub mod flag {
     pub (in crate::board) const MOVE_COUNT_BIT_SIZE:        u8 = 0b1111;
 
     //value that's > 9 but is (NEW_GAME + NEW_GAME * 9) < u8::MAX --  NOTE: not stable yet
-    pub const NEW_GAME:                                     u8 = 0;   
+    pub const NEW_GAME:                                     u8 = 0;
 
     pub const EMPTY:                                        u8 = 0;
     pub const X_PLAYER:                                     u8 = 1;
@@ -64,14 +64,14 @@ pub mod flag {
 /// most significant bit <- -> least significant bit
 /// meta data bits `31–18` -- cells `17–0`
 /// `[14 bits meta data — 18 bits cell data]`
-///     * `9` cells x `2` bits per cell = `18` bits 
+///     * `9` cells x `2` bits per cell = `18` bits
 ///     * meta data `[0000 — 0000 — 0000 — 00]`
 ///         * `4` bits empty — move_count o `4` bits — move_count x `4` bits — miniboard_status `2` bits
 /// xo_miniboard_win_count: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
 #[derive(Debug)]
 pub struct Board {
     pub main_board: [u32; 9],
-    pub (crate) last_move: (u8, u8),    // The last valid move that was made 
+    pub (crate) last_move: (u8, u8),    // The last valid move that was made
     pub (crate) xo_miniboard_win_count: u8,
     pub move_history: Option<MoveHistory>,
 }
@@ -94,7 +94,7 @@ impl Clone for Board {
 impl Board {
 
     /// Creates a new, empty `Board` with or without move history.
-    /// 
+    ///
     /// # Example
     /// ```
     /// use ut3_oxide::board::Board;
@@ -104,14 +104,14 @@ impl Board {
     /// let mut board_without = Board::new(false);
     /// ```
     pub fn new(track_move_history: bool) -> Self {
-        Board { 
+        Board {
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,
             move_history: if track_move_history {
                 Some(MoveHistory::new())
             } else {
-                None 
+                None
             },
         }
     }
@@ -163,8 +163,8 @@ impl Board {
         let row = row as usize;
         let offset = column * 2;
         let mask = 0b11 << offset;
-        self.main_board[row] &= !(mask as u32); 
-        
+        self.main_board[row] &= !(mask as u32);
+
         // set bits
         let mask = (value as u32) << offset;
         self.main_board[row] |= mask;
@@ -196,7 +196,7 @@ impl Board {
     // NOTE: hot function
     #[inline(always)]
     pub fn get_status_of(&self, miniboard: u8) -> u8 {
-        self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE) 
+        self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE)
     }
 
     /// Sets the status of a `miniboard`.
@@ -205,12 +205,12 @@ impl Board {
         assert!(value <= flag::STATUS_DRAW);
         self.set_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE, value);
     }
-    
+
     /// Returns the number of `miniboards` won by a `player`.
     pub fn get_miniboard_win_count_of(&self, player: u8) -> u8 {
         assert!(player == flag::X_PLAYER || player == flag::O_PLAYER);
         let offset = (player - 1) * 3;
-        let mask = 0b111 << offset; 
+        let mask = 0b111 << offset;
         (self.xo_miniboard_win_count & mask) >> offset
     }
 
@@ -221,7 +221,7 @@ impl Board {
         let offset = (player - 1) * 3;
 
         // clear bits
-        let mask = 0b111 << offset; 
+        let mask = 0b111 << offset;
         let mut win_count = self.xo_miniboard_win_count & !mask;
 
         // set bits
@@ -264,7 +264,7 @@ impl Board {
             player_flag == flag::MINIBOARD_MOVE_COUNT_X
             || player_flag == flag::MINIBOARD_MOVE_COUNT_O
         );
-        self.set_meta_data(miniboard, player_flag, flag::MOVE_COUNT_BIT_SIZE, value); 
+        self.set_meta_data(miniboard, player_flag, flag::MOVE_COUNT_BIT_SIZE, value);
     }
 
     /// Returns the total number of `moves` both `players` have made in a `miniboard`.
@@ -278,12 +278,12 @@ impl Board {
 
     pub fn set_total_move_count_of(&mut self, miniboard: u8, value: u8) {
         // maps 1 => 22 and 2 => 26
-        self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_TOTAL, flag::MOVE_COUNT_BIT_SIZE, value); 
+        self.set_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_TOTAL, flag::MOVE_COUNT_BIT_SIZE, value);
     }
-    
+
     /////* Moves */////
 
-    /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply 
+    /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply
     /// minboard status checks
     /// # Example
     /// ```
@@ -298,10 +298,10 @@ impl Board {
         assert!(player <= 2);
         debug_assert_ne!(player, 0, "'player' was 0! must be 1 or 2");
         let miniboard = Self::move_miniboard(row, column);
-        
+
         // take a snapshot of the relevant board state before the move
         // so, when we undo to roll back the change
-        // we surgically alter the row of the move, and the miniboard affected which may be 
+        // we surgically alter the row of the move, and the miniboard affected which may be
         // on a different row, with the previous values
         if self.move_history.is_some() {
             let mb_move_count = (self.main_board[miniboard as usize] >> 20) as u16;
@@ -348,7 +348,7 @@ impl Board {
             let mask = (1 << 12) - 1;   // 0b1111_1111_1111;
             let mut move_count = self.main_board[miniboard as usize];
             move_count &= !(mask << offset);
-            
+
             //set
             move_count |= (mb_move_count as u32) << 20;
 
@@ -371,11 +371,11 @@ impl Board {
         debug_assert!(row < 9);
         debug_assert!(column < 9);
 
-        (row / 3) * 3 + column / 3   
+        (row / 3) * 3 + column / 3
     }
 
     //TODO: find better name than "corresponding"
-    
+
     /// Returns the miniboard number that the next move should be played in,
     /// typically based on the previous move.
     /// # Example
@@ -412,8 +412,8 @@ impl Board {
         debug_assert!(starting_row % 3 == 0 && starting_row <= 6);
         debug_assert!(starting_column % 3 == 0 && starting_column <= 6);
 
-        // do row by row, so 
-        // for miniboard 4 -> [3,3 3,4 3,5] [4,3 4,4 4,5] [5,3 5,4 5,5] 
+        // do row by row, so
+        // for miniboard 4 -> [3,3 3,4 3,5] [4,3 4,4 4,5] [5,3 5,4 5,5]
         // not cell by cell
         let col_offset = starting_column * 2;
         let columns_mask = 0b11_11_11 << col_offset;
@@ -453,7 +453,7 @@ impl Board {
     }
 
     pub fn _get_miniboard_statuses_iter(&self) -> iterator::MiniboardStatusesIterator {
-        let bitfield = self.get_miniboard_statuses(); 
+        let bitfield = self.get_miniboard_statuses();
 
         iterator::MiniboardStatusesIterator::new(bitfield)
     }
@@ -461,7 +461,7 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Self { 
+        Self {
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,

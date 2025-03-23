@@ -67,7 +67,7 @@ mod tests {
             for column in 0..9 {
                 let move_miniboard = Board::move_miniboard(row, column);
                 if (row, column) == (5, 5)
-                    || (row, column) == occuipied_cell 
+                    || (row, column) == occuipied_cell
                     || move_miniboard == uncontestable_miniboard
                     || move_miniboard == uncontestable_corresponding_miniboard
                 {
@@ -127,7 +127,7 @@ mod tests {
         board.set_cell(3, 3, 1);
         board.set_cell(3, 4, 2);
         board.set_cell(3, 5, 1);
- 
+
         board.set_cell(4, 3, 1);
         board.set_cell(4, 4, 1);
         board.set_cell(4, 5, 1);
@@ -162,7 +162,7 @@ mod tests {
         assert_eq!(winner, flag::STATUS_O_WIN);
         board.reset();
 
-        // row: 1  
+        // row: 1
         board.do_move(1, 3, 1);
         board.do_move(1, 4, 1);
         board.do_move(1, 5, 1);
@@ -174,7 +174,7 @@ mod tests {
         assert_eq!(winner, flag::STATUS_X_WIN);
         board.reset();
 
-        // row: 2  
+        // row: 2
         // x win
         board.do_move(2, 6, 1);
         board.do_move(2, 7, 1);
@@ -208,7 +208,7 @@ mod tests {
         let win = board.calculate_miniboard_status(miniboard);
         assert!(win);
         board.reset();
-        
+
         // column: 1
         board.do_move(3, 4, 1);
         board.do_move(4, 4, 1);
@@ -255,7 +255,7 @@ mod tests {
         assert_eq!(status, flag::STATUS_DRAW);
 
         // 9 moves is a draw but ensure priority to win checking
-        // by changing last 3 rows to make x win and have 9 moves made 
+        // by changing last 3 rows to make x win and have 9 moves made
         //board.set_player_move_count_of(miniboard, 3, 1);
         //board.set_player_move_count_of(miniboard, 3, 2);
         board.set_total_move_count_of(miniboard, 6);
@@ -263,7 +263,7 @@ mod tests {
         board.do_move(8, 6, 1);
         board.do_move(8, 7, 2);
         board.do_move(8, 8, 1);
-        
+
         let move_count = board.get_total_move_count_of(miniboard);
         let status_changed = board.calculate_miniboard_status(miniboard);
         let status = board.get_status_of(miniboard);
@@ -325,7 +325,7 @@ mod tests {
         let mut board = Board::default();
         let ai = AI::default();
 
-        // x win -- miniboards 3, 4, 5 
+        // x win -- miniboards 3, 4, 5
         board.do_move(3, 0, 1);
         board.do_move(3, 1, 1);
         board.do_move(3, 2, 1);
@@ -354,7 +354,7 @@ mod tests {
         assert_eq!(gamestatus, flag::STATUS_CONTESTABLE);
 
         // o win
-        // pretend x didn't form a line in the 5th miniboard and test 
+        // pretend x didn't form a line in the 5th miniboard and test
         board.set_cell(5, 8, 0);
         board.set_status_of(5, flag::STATUS_CONTESTABLE);
 
@@ -377,7 +377,7 @@ mod tests {
         assert_eq!(gamestatus, flag::STATUS_O_WIN);
         assert_eq!(o_mbwincount, 3);
 
-        // draw: every cell full, or every miniboard is uncontestable 
+        // draw: every cell full, or every miniboard is uncontestable
         //board.do_move(row, column, xoshape);
         println!("\ndraw test game status");
         board.reset();
@@ -436,7 +436,7 @@ mod tests {
         board.set_miniboard_win_count_of(1, 5);
         assert_eq!(board.get_miniboard_win_count_of(1), 5);
         assert_eq!(board.get_miniboard_win_count_of(2), 0);
-        
+
         // move test
         assert_eq!(board.get_miniboard_win_count_of(2), 0);
 

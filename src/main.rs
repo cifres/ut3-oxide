@@ -99,7 +99,7 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
     println!(
         "wr @ depth {depth_1} X: {wrx:.2}%\nwr @ depth {depth_2} O: {wro:.2}%
         — total games: {total}
-        — average total turns:  {average_turns:.2} of total {total_turns} 
+        — average total turns:  {average_turns:.2} of total {total_turns}
         — draws: {draws}",
     );
 }
@@ -110,7 +110,7 @@ fn player_vs_ai(board: &mut Board) {
     println!("{board:#}");
 
     loop {
-        let Some((row, column)) = ask_move(board) else { 
+        let Some((row, column)) = ask_move(board) else {
             println!("{board:#}");
             continue;
         };
@@ -156,10 +156,10 @@ fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
     io::stdin()
         .read_line(&mut input)
         .expect("Couldn't get the input");
-    
+
     let input = input.trim_end();
     if input == "u" {
-        // undo twice for the AI and the player 
+        // undo twice for the AI and the player
         board.undo_move();
         board.undo_move();
         return None;
