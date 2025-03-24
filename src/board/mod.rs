@@ -150,9 +150,9 @@ impl Board {
         assert!(row < 9);
         assert!(column < 9);
         let offset = column * 2;
-        let mask = 0b11 << offset;
+        //let mask = 0b11 << offset;
 
-        ((self.main_board[row as usize] & mask) >> offset) as u8
+        ((self.main_board[row as usize] >> offset) & 0b11) as u8
     }
 
     #[inline]
@@ -160,14 +160,13 @@ impl Board {
         assert!(row < 9);
         assert!(column < 9);
         // clear bits
-        let row = row as usize;
         let offset = column * 2;
         let mask = 0b11 << offset;
-        self.main_board[row] &= !(mask as u32);
+        self.main_board[row as usize] &= !(mask as u32);
 
         // set bits
         let mask = (value as u32) << offset;
-        self.main_board[row] |= mask;
+        self.main_board[row as usize] |= mask;
     }
 
     /////* Miniboard Meta Data */////
