@@ -303,7 +303,7 @@ impl Board {
         // we surgically alter the row of the move, and the miniboard affected which may be
         // on a different row, with the previous values
         if self.move_history.is_some() {
-            let mb_move_count = (self.main_board[miniboard as usize] >> 20) as u16;
+            let mb_move_count = (self.main_board[miniboard as usize] >> flag::MINIBOARD_MOVE_COUNT_X) as u16;
             let mb_status = self.get_status_of(miniboard);
 
             self.move_history.as_mut().unwrap().add(
@@ -355,8 +355,6 @@ impl Board {
             //println!("in undo after {:012b}", move_count);
         }
     }
-
-    // TODO: look up table
 
     /// Returns the `miniboard` that `move` is in.
     /// # Example
