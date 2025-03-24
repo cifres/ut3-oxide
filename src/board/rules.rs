@@ -49,12 +49,19 @@ const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
 pub const WINNING_LINES: [[(u8, u8); 3]; 8] = build_winning_lines();
 
 impl Board {
+    /// Returns if a `move` is `valid` or `invalid`
     /// validate moves by ensuring that invalidity if:
     /// * cell is occupied
     /// * miniboard is 'uncontestable' i.e. won by X or O, or drawn
     /// * miniboard coords don't correspond to last move
     /// * exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
     ///     empty, and its board is contestable
+    /// # Example
+    /// ```
+    /// # use ut3_oxide::board::Board;
+    /// let board = Board::default();
+    /// assert!(board.is_valid_move(4, 4));
+    /// ```
     pub fn is_valid_move(&self, row: u8, column: u8) -> bool {
         assert!(row < 9);
         assert!(column < 9);
@@ -96,6 +103,12 @@ impl Board {
 
     /// Generates a bitfield from the valid moves on the miniboards
     /// `1` == valid and `0` == invalid
+    /// # Example
+    /// ```
+    /// # use ut3_oxide::board::Board;
+    /// let mut board = Board::default();
+    /// assert_eq!(board.valid_moves_bitfield(), (1 << 81) - 1);    // every move is valid
+    /// ```
     // TODO: order moves by importance?
     pub fn valid_moves_bitfield(&self) -> u128 {
         let mut moves_validity_bitfield = 0u128;
@@ -105,11 +118,8 @@ impl Board {
         let (last_row, last_column) = self.last_move;
         let corresponding_mb = Self::move_corresponding_miniboard(last_row, last_column);
 
-        if !self.is_first_move()
-            && self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE
+        if !self.is_first_move() && self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE
         {
-            // TODO: could directly check for cell == empty and first move of the game exception for
-            // faster eval?
             let (starting_row, starting_column) =
                 (corresponding_mb / 3 * 3, corresponding_mb % 3 * 3);
             for row in starting_row..starting_row + 3 {
@@ -135,6 +145,7 @@ impl Board {
         }
     }
 
+    /// Returns if the first move has yet to be made
     fn is_first_move(&self) -> bool {
         let (last_row, last_column) = self.last_move;
         let last_cell = self.get_cell(last_row, last_column);
@@ -144,17 +155,25 @@ impl Board {
         //last_row == flag::NEW_GAME
     }
 
+    /// Returns an iterator yielding valid `moves` as `(row, column)`
     pub fn valid_moves(&self) -> ValidMoveIterator {
         let bitfield = self.valid_moves_bitfield();
 
         ValidMoveIterator::new(bitfield)
     }
 
+    /// Returns a `bool` with `true` indicating the miniboard's status isn't `flag::STATUS_CONTESTABLE`
     /// Checks and calculates the miniboard's status based on any winning lines
     /// Short-circuits and stops as soon as any winning line is found
     /// Use with `get_status_of(miniboard: u8)`
-    /// Returns a `bool` with `true` indicating the miniboard's status isn't `flag::STATUS_CONTESTABLE`
     /// i.e, `flag::STATUS_X_WIN`, `flag::STATUS_O_WIN`, or `flag::STATUS_DRAW`
+    /// # Example 
+    /// ```
+    /// # use ut3_oxide::board::Board;
+    /// let mut board = Board::default();
+    /// board.set_status_of(4, 2);
+    /// assert!(board.calculate_miniboard_status(4));
+    /// ```
     pub fn calculate_miniboard_status(&mut self, miniboard: u8) -> bool {
         // Don't recheck/recalculate winning lines for an uncontestable (won/lost/drawn) miniboard
         // Remove to trigger recalculation for usage with AI do/undo move pattern
@@ -247,6 +266,19 @@ impl Board {
     // Compare against last player's move only for masking
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
+    /// # Example 
+    /// ```
+    /// # use ut3_oxide::board::Board;
+    /// let mut board = Board::default();
+    /// // Win miniboard 4
+    /// board.do_move(4, 3, 1);
+    /// board.do_move(4, 4, 1);
+    /// board.do_move(4, 5, 1);
+    /// // Emulate winnning two more in a line
+    /// board.set_status_of(3, 1);
+    /// board.set_status_of(5, 1);
+    /// assert_eq!(board.calculate_game_status(), 1);
+    /// ```
     pub fn calculate_game_status(&self) -> u8 {
         let (row, column) = self.last_move;
         let last_player = self.get_cell(row, column);
