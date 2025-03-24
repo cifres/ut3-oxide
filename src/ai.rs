@@ -54,8 +54,15 @@ impl Default for AI {
     }
 }
 
-// #[allow(dead_code)]
 impl AI {
+    /// Creates a new [`AI`] with either `X` or `O` shape 
+    /// representing `1` or `2`.
+    /// # Example
+    /// ```
+    /// use ut3_oxide::{board::flag, ai::AI};
+    /// let ai_x = AI::new(flag::X_PLAYER);
+    /// let ai_o = AI::new(flag::O_PLAYER);
+    /// ```
     pub fn new(ai_shape: u8) -> Self {
         //println!("Ai created as {ai_shape}");
         let opponent_shape = if ai_shape == flag::O_PLAYER {
@@ -69,6 +76,15 @@ impl AI {
         }
     }
 
+    /// Generates a move in parallel at `depth` given the `Board` state.
+    /// # Example
+    /// ```
+    /// # use ut3_oxide::{board::Board, ai::AI};
+    /// let mut board = Board::default();
+    /// let aio = AI::default();
+    /// let (row, column) = aio.calculate_move_par(&board, 5);
+    /// board.do_move(row, column, 2);  // 2 represents O
+    /// ```
     pub fn calculate_move_par(&self, board: &Board, depth: u8) -> (u8, u8) {
         let depth = if depth > 0 { depth } else { DEPTH };
 
@@ -88,6 +104,20 @@ impl AI {
         bstmv.expect("a move should've been selected").1
     }
 
+    /// Returns the evaluation of the current state after simulating moves till `depth`
+    /// through `α-β pruning` variation of `minimax`.
+    /// # Example
+    /// ```
+    /// # use ut3_oxide::{board::Board, ai::AI};
+    /// # let depth = 1;
+    /// // initial call example
+    /// let mut board = Board::default();
+    /// let aio = AI::default();
+    /// // for move in moves...
+    /// // let mut board = board.clone();
+    /// // board.do_move(row, column, self.ai_shape);
+    /// // let score = self.alphabeta_mm(&mut board, depth - 1, i16::MIN, i16::MAX, false);
+    /// ```
     fn alphabeta_mm(
         &self,
         board: &mut Board,
@@ -133,21 +163,26 @@ impl AI {
         }
     }
 
-    /// Winning = `i16::MAX`, Drawing = 0, Losing = `i16::MIN`
-    /// ± score for:
-    /// * won/lost miniboards
-    /// * centre-control: ai_shape in centre of miniboard and [near-]winning centre miniboard (#4)
-    /// * pointing to [near]-won miniboards?
-    /// * near-won/lost miniboards/full board
-    ///     * continuous relative +/- 10
-    ///     * unconnected relative +/- 5
-    ///     * interrupted/broken relative +/- 7
-    /// * sending to miniboard
-    ///
-    /// Returns the evaluation of the board state
+    // Winning = `i16::MAX`, Drawing = 0, Losing = `i16::MIN`
+    // ± score for:
+    // * won/lost miniboards
+    // * centre-control: ai_shape in centre of miniboard and [near-]winning centre miniboard (#4)
+    // * pointing to [near]-won miniboards?
+    // * near-won/lost miniboards/full board
+    //     * continuous relative +/- 10
+    //     * unconnected relative +/- 5
+    //     * interrupted/broken relative +/- 7
+    // * sending to miniboard
+    /// Returns the evaluation of the board state. Used internally to inform good/bad moves
+    /// # Example
+    /// ```
+    /// # use ut3_oxide::{board::Board, ai::AI};
+    /// let mut board = Board::default();
+    /// let aio = AI::default();
+    /// let eval = aio.evaluate(&board);
+    /// ```
     #[no_mangle]
     pub fn evaluate(&self, board: &Board) -> i16 {
-        // should the main board produce and return miniboard statuses or the AI?
         // for aishape won miniboards += score_mult
         // for oppshape won miniboards -= score_mult
 
