@@ -156,14 +156,13 @@ impl Board {
     pub fn set_cell(&mut self, row: u8, column: u8, value: u8) {
         assert!(row < 9);
         assert!(column < 9);
+
         // clear bits
         let offset = column * 2;
-        let mask = 0b11 << offset;
-        self.main_board[row as usize] &= !(mask as u32);
+        self.main_board[row as usize] &= !((0b11 << offset) as u32);
 
         // set bits
-        let mask = (value as u32) << offset;
-        self.main_board[row as usize] |= mask;
+        self.main_board[row as usize] |= (value as u32) << offset;
     }
 
     /////* Miniboard Meta Data */////
