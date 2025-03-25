@@ -181,7 +181,7 @@ impl AI {
     /// let aio = AI::default();
     /// let eval = aio.evaluate(&board);
     /// ```
-    #[no_mangle]
+    //#[unsafe(no_mangle)]
     pub fn evaluate(&self, board: &Board) -> i16 {
         // for aishape won miniboards += score_mult
         // for oppshape won miniboards -= score_mult

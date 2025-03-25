@@ -130,7 +130,7 @@ impl Board {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
         self.xo_miniboard_win_count = 0;
-        if let Some(ref mut move_history) = &mut self.move_history {
+        if let Some(move_history) = &mut self.move_history {
             move_history.reset();
         }
     }
