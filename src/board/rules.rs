@@ -177,11 +177,9 @@ impl Board {
     /// assert!(board.calculate_miniboard_status(4));
     /// ```
     pub fn calculate_miniboard_status(&mut self, miniboard: u8) -> bool {
-        // Don't recheck/recalculate winning lines for an uncontestable (won/lost/drawn) miniboard
-        // Remove to trigger recalculation for usage with AI do/undo move pattern
-        // PERF: or just set mb status to contestable
-
         assert!(miniboard < 9);
+
+        // Don't recheck/recalculate winning lines for an uncontestable (won/lost/drawn) miniboard
         if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
             //println!("nocalc cached {miniboard} as state {}", self.get_status_of(miniboard));
             return true;

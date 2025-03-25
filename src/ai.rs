@@ -205,10 +205,10 @@ impl AI {
         // println!("@ centre mb {score}");
 
         // todo combine crude miniboard checks into one
-        // crude individual miniboard check
         // TODO: combine centre cells in one u32 and compare?
         const CENTRE_CELL_OFFSET: u8 = 8; // (col 1 + row 1 * 3) * 2
-        for cells in (0..9).map(|n| board.get_miniboard_cells(n)) {
+        for miniboard in 0..9 {
+            let cells = board.get_miniboard_cells(miniboard);
             let mask = 0b11 << CENTRE_CELL_OFFSET;
             let centre_cell = ((cells & mask) >> CENTRE_CELL_OFFSET) as u8;
 
@@ -217,17 +217,6 @@ impl AI {
                 * SCORE_UNIT
                 * CENTRE_CELL_CONTROL;
         }
-
-        //for miniboard in 0..9 {
-        //    let cells = board.get_miniboard_cells(miniboard);
-        //    let mask = 0b11 << CENTRE_CELL_OFFSET;
-        //    let centre_cell = ((cells & mask) >> CENTRE_CELL_OFFSET) as u8;
-        //
-        //    score += (((centre_cell == self.ai_shape) as i16)
-        //        - ((centre_cell == self.opponent_shape) as i16))
-        //        * SCORE_UNIT
-        //        * CENTRE_CELL_CONTROL;
-        //}
 
         // println!("@ centre cell {score}");
 
