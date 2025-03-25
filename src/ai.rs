@@ -417,145 +417,149 @@ impl AI {
     }
 }
 
-#[test]
-fn ai_evaluate() {
-    let ai = AI::default();
-    let mut board = Board::default();
-    board.do_move(3, 0, 2);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let score = ai.evaluate(&board);
-    assert_eq!(score, 0);
+    #[test]
+    pub(crate) fn ai_evaluate() {
+        let ai = AI::default();
+        let mut board = Board::default();
+        board.do_move(3, 0, 2);
 
-    // winning the centre cell and miniboard
-    board.do_move(3, 3, 2);
-    board.do_move(4, 4, 2);
-    board.do_move(5, 5, 2);
-    let _ = board.calculate_game_status();
-    let score = ai.evaluate(&board);
-    assert_eq!(
-        score,
-        SCORE_UNIT * CENTRE_MB_CONTROL
-            + SCORE_UNIT * CENTRE_CELL_CONTROL
-            + SCORE_UNIT * MINIBOARD_WIN_COUNT
-            + SCORE_UNIT * NEAR_WON_MB_LINES * 2
-            + SCORE_UNIT * CELL_CORRESPONDING_SAME_MB
-            - SCORE_UNIT * UNCONESTABLE_MB_POINTING
-    );
-    board.reset();
+        let score = ai.evaluate(&board);
+        assert_eq!(score, 0);
 
-    // losing the centre cell and miniboard
-    board.do_move(3, 3, 1);
-    board.do_move(4, 4, 1);
-    board.do_move(5, 5, 1);
-    let _ = board.calculate_game_status();
-    let score = ai.evaluate(&board);
-    assert_eq!(
-        score,
-        -SCORE_UNIT * CENTRE_MB_CONTROL
-            - SCORE_UNIT * CENTRE_CELL_CONTROL
-            - SCORE_UNIT * MINIBOARD_WIN_COUNT
-            - SCORE_UNIT * NEAR_WON_MB_LINES * 2
-            - SCORE_UNIT * CELL_CORRESPONDING_SAME_MB
-            + SCORE_UNIT * UNCONESTABLE_MB_POINTING
-    );
-    board.reset();
+        // winning the centre cell and miniboard
+        board.do_move(3, 3, 2);
+        board.do_move(4, 4, 2);
+        board.do_move(5, 5, 2);
+        let _ = board.calculate_game_status();
+        let score = ai.evaluate(&board);
+        assert_eq!(
+            score,
+            SCORE_UNIT * CENTRE_MB_CONTROL
+                + SCORE_UNIT * CENTRE_CELL_CONTROL
+                + SCORE_UNIT * MINIBOARD_WIN_COUNT
+                + SCORE_UNIT * NEAR_WON_MB_LINES * 2
+                + SCORE_UNIT * CELL_CORRESPONDING_SAME_MB
+                - SCORE_UNIT * UNCONESTABLE_MB_POINTING
+        );
+        board.reset();
 
-    // winning/losing miniboards
-    board.do_move(2, 6, 2);
-    board.do_move(2, 7, 2);
-    board.do_move(2, 8, 2);
-    let _ = board.calculate_game_status();
+        // losing the centre cell and miniboard
+        board.do_move(3, 3, 1);
+        board.do_move(4, 4, 1);
+        board.do_move(5, 5, 1);
+        let _ = board.calculate_game_status();
+        let score = ai.evaluate(&board);
+        assert_eq!(
+            score,
+            -SCORE_UNIT * CENTRE_MB_CONTROL
+                - SCORE_UNIT * CENTRE_CELL_CONTROL
+                - SCORE_UNIT * MINIBOARD_WIN_COUNT
+                - SCORE_UNIT * NEAR_WON_MB_LINES * 2
+                - SCORE_UNIT * CELL_CORRESPONDING_SAME_MB
+                + SCORE_UNIT * UNCONESTABLE_MB_POINTING
+        );
+        board.reset();
 
-    board.do_move(3, 6, 1);
-    board.do_move(3, 7, 1);
-    board.do_move(3, 8, 1);
-    let _ = board.calculate_game_status();
+        // winning/losing miniboards
+        board.do_move(2, 6, 2);
+        board.do_move(2, 7, 2);
+        board.do_move(2, 8, 2);
+        let _ = board.calculate_game_status();
 
-    board.do_move(3, 0, 2);
-    board.do_move(3, 1, 2);
-    board.do_move(3, 2, 2);
+        board.do_move(3, 6, 1);
+        board.do_move(3, 7, 1);
+        board.do_move(3, 8, 1);
+        let _ = board.calculate_game_status();
 
-    let ai_mbs_won = 2;
-    let opp_mbs_won = 1;
-    let net_near_won_mb_lines = 4 - 2;
+        board.do_move(3, 0, 2);
+        board.do_move(3, 1, 2);
+        board.do_move(3, 2, 2);
 
-    let _ = board.calculate_game_status();
-    let score = ai.evaluate(&board);
-    assert_eq!(
-        score,
-        ((ai_mbs_won - opp_mbs_won) * SCORE_UNIT * MINIBOARD_WIN_COUNT
-            + SCORE_UNIT * NEAR_WON_MB_LINES * net_near_won_mb_lines)
-    );
+        let ai_mbs_won = 2;
+        let opp_mbs_won = 1;
+        let net_near_won_mb_lines = 4 - 2;
 
-    board.reset();
+        let _ = board.calculate_game_status();
+        let score = ai.evaluate(&board);
+        assert_eq!(
+            score,
+            ((ai_mbs_won - opp_mbs_won) * SCORE_UNIT * MINIBOARD_WIN_COUNT
+                + SCORE_UNIT * NEAR_WON_MB_LINES * net_near_won_mb_lines)
+        );
 
-    // near won/lost continous/unconnected lines
-    println!("continuous_line test");
-    board.do_move(3, 1, 2);
-    board.set_status_of(5, 2);
-    board.set_status_of(8, 2);
+        board.reset();
 
-    board.set_status_of(0, 2);
-    board.set_status_of(3, 2);
+        // near won/lost continous/unconnected lines
+        println!("continuous_line test");
+        board.do_move(3, 1, 2);
+        board.set_status_of(5, 2);
+        board.set_status_of(8, 2);
 
-    let score = ai.evaluate(&board);
-    assert_eq!(score, SCORE_UNIT * NEAR_WON_LINES * 4);
-    board.reset();
+        board.set_status_of(0, 2);
+        board.set_status_of(3, 2);
 
-    board.do_move(1, 0, 2);
-    board.set_status_of(0, 2);
-    board.set_status_of(6, 2);
+        let score = ai.evaluate(&board);
+        assert_eq!(score, SCORE_UNIT * NEAR_WON_LINES * 4);
+        board.reset();
 
-    board.set_status_of(1, 1);
-    board.set_status_of(7, 1);
+        board.do_move(1, 0, 2);
+        board.set_status_of(0, 2);
+        board.set_status_of(6, 2);
 
-    board.set_status_of(2, 2);
-    board.set_status_of(8, 2);
+        board.set_status_of(1, 1);
+        board.set_status_of(7, 1);
 
-    let score = ai.evaluate(&board);
+        board.set_status_of(2, 2);
+        board.set_status_of(8, 2);
 
-    // corners * 2?
-    assert_eq!(score, 5 * SCORE_UNIT * NEAR_WON_LINES);
+        let score = ai.evaluate(&board);
 
-    board.reset();
-    // pointing to uncontestable miniboards
-    board.set_status_of(3, 1);
-    board.set_status_of(5, 2);
+        // corners * 2?
+        assert_eq!(score, 5 * SCORE_UNIT * NEAR_WON_LINES);
 
-    board.do_move(2, 0, 2);
-    board.do_move(7, 0, 2);
-    board.do_move(2, 3, 1);
+        board.reset();
+        // pointing to uncontestable miniboards
+        board.set_status_of(3, 1);
+        board.set_status_of(5, 2);
 
-    assert_eq!(
-        ai.evaluate(&board),
-        (1 - 2) * SCORE_UNIT * UNCONESTABLE_MB_POINTING
-    );
-}
+        board.do_move(2, 0, 2);
+        board.do_move(7, 0, 2);
+        board.do_move(2, 3, 1);
 
-#[test]
-fn ai_minimax() {
-    // let mut board = Board::default();
-    // let ai = AI::default();
-    //
-    // board.do_move(2, 4, 1);
-    // let aimove = ai.calculate_move(&board, 6);
-    // println!("{aimove:?}");
-}
+        assert_eq!(
+            ai.evaluate(&board),
+            (1 - 2) * SCORE_UNIT * UNCONESTABLE_MB_POINTING
+        );
+    }
 
+    #[test]
+    pub(crate) fn ai_minimax() {
+        // let mut board = Board::default();
+        // let ai = AI::default();
+        //
+        // board.do_move(2, 4, 1);
+        // let aimove = ai.calculate_move(&board, 6);
+        // println!("{aimove:?}");
+    }
 
-#[test]
-fn cells_int() {
-    let mut board = Board::default();
-    let aix = AI::default();
+    #[test]
+    pub(crate) fn cells_int() {
+        let mut board = Board::default();
+        let aix = AI::default();
 
-    board.do_move(4, 4, 1);
-    board.do_move(4, 7, 1);
-    board.do_move(4, 1, 1);
-    board.do_move(1, 1, 2);
-    board.set_status_of(4, 1);
-    board.set_status_of(5, 2);
-    board.set_status_of(0, 1);
-    board.set_status_of(8, 1);
+        board.do_move(4, 4, 1);
+        board.do_move(4, 7, 1);
+        board.do_move(4, 1, 1);
+        board.do_move(1, 1, 2);
+        board.set_status_of(4, 1);
+        board.set_status_of(5, 2);
+        board.set_status_of(0, 1);
+        board.set_status_of(8, 1);
 
-    aix.evaluate(&board);
+        aix.evaluate(&board);
+    }
 }

@@ -108,6 +108,8 @@ impl Board {
     /// # use ut3_oxide::board::Board;
     /// let mut board = Board::default();
     /// assert_eq!(board.valid_moves_bitfield(), (1 << 81) - 1);    // every move is valid
+    /// board.do_move(3, 3, 2);
+    /// assert_eq!(board.valid_moves_bitfield(), 0b111000000111000000111);
     /// ```
     // TODO: order moves by importance?
     pub fn valid_moves_bitfield(&self) -> u128 {

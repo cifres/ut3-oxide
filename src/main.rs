@@ -39,7 +39,7 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
         .expect("iterations should be a number between 0–65535");
 
     let ai_x = AI::new(flag::X_PLAYER);
-    let ai_o = AI::default();
+    let ai_o = AI::new(flag::O_PLAYER);
 
     let mut wins = 0u16;
     let mut draws = 0u16;
@@ -174,7 +174,7 @@ fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
     let [row, col, ..] = input
         .split_whitespace()
         .map(|sn| sn.parse().expect("Should have parsed the number {sn}"))
-        .collect::<Vec<u8>>()[..] else { todo!() };
+        .collect::<Vec<u8>>()[..] else { unreachable!() };
 
     Some((row, col))
 }
