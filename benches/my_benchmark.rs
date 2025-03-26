@@ -22,9 +22,10 @@ fn winrate_benchmark(c: &mut Criterion) {
     // 298.42 μs @ depth 5
     // 246.42 μs @ depth 5
     // 211.28 μs @ depth 5 inline only no (always)
-    // 362.29 μs @ depth 5 mixed
     // 125.14 μs @ depth 5
-    // 124.14 μs @ depth 5 -- current best
+    // PC 124.14 μs @ depth 5 26/03/2025
+    // Laptop 182 μs @ depth 5 -- current best
+    // PC 118~ μs @ depth 5 -- current best
     group.bench_function("single-call-performance", |b| {
         b.iter(|| {
             ai.calculate_move_par(&board, DEPTH);
@@ -76,12 +77,14 @@ fn winrate_benchmark(c: &mut Criterion) {
 
     let total = wins + losses + draws;
     let average_turns = total_turns as f32 / total as f32;
-    let wr = (wins as f64 / total as f64) * 100.0;
+    let wro = (wins as f64 / total as f64) * 100.0;
+    let wrx = (losses as f64 / total as f64) * 100.0;
+    let drawper = (draws as f64 / total as f64) * 100.0;
     println!(
-        "wr @ depth {DEPTH}: {wr:.2}% -> (O's wins) {wins}/{total}
-        — average total turns = {average_turns:.2} of {total_turns} 
-        — losses (X's wins): {losses}
-        — draws: {draws}",
+        "wr @ depth {DEPTH}: wins (O's wins) {wro:.2}% -> {wins}/{total} 
+        — losses (X's wins): {wrx:.2}% {losses}/{total}
+        — draws: {drawper:.2}% {draws}/{total}
+        — average total turns: {average_turns:.2} of {total_turns}",
     );
 }
 

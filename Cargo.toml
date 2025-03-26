@@ -25,7 +25,6 @@ opt-level = 3
 
 [profile.profiling]
 inherits = "release"
-lto = "thin" 
 strip = "none"
 opt-level = 3
 panic = "abort"
