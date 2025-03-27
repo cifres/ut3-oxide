@@ -95,12 +95,13 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
     let average_turns = total_turns as f32 / total as f32;
     let wrx = (wins as f64 / total as f64) * 100.0;
     let wro = (losses as f64 / total as f64) * 100.0;
+    let drawrate = (draws as f64 / total as f64) * 100.0;
 
     println!(
-        "wr @ depth {depth_1} X: {wrx:.2}%\nwr @ depth {depth_2} O: {wro:.2}%
+        "wr @ depth {depth_1} X: {wrx:.2}% ({wins}/{total})\nwr @ depth {depth_2} O: {wro:.2}% ({losses}/{total})
         — total games: {total}
-        — average total turns:  {average_turns:.2} of total {total_turns}
-        — draws: {draws}",
+        — average total turns: {average_turns:.2} of total {total_turns}
+        — draws: {drawrate:.2}% ({draws}/{total}),"
     );
 }
 
