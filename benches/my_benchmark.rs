@@ -49,15 +49,19 @@ fn winrate_benchmark(c: &mut Criterion) {
     let mut draws = 0u16;
     let mut losses = 0u16;
     let mut total_turns = 0u32;
+    //let mut total_moves = 0u32;
+    //let mut running_avg_mov = Vec::new();
     //let duration = std::time::Duration::from_secs(30);
 
     // group.sample_size(10).measurement_time(duration);
     //group.measurement_time(duration);
     group.bench_function("winrate", |b| {
         b.iter(|| {
-            let (status, turns) = ai_playout();
+            let (status, turns, moves) = ai_playout();
             //let (status, turns) = ai_vs_ai(board.clone(), &aix, &aio);
             total_turns += turns as u32;
+            //total_moves += moves as u32;
+            //running_avg_mov.push(moves as f32 / turns as f32);
             if status == flag::O_PLAYER {
                 wins += 1;
             } else if status == flag::STATUS_DRAW {
@@ -80,11 +84,16 @@ fn winrate_benchmark(c: &mut Criterion) {
     let wro = (wins as f64 / total as f64) * 100.0;
     let wrx = (losses as f64 / total as f64) * 100.0;
     let drawper = (draws as f64 / total as f64) * 100.0;
+    //let average_possible_moves = total_moves as f32 / total_turns as f32;
+    //let running_avg = running_avg_mov.iter().sum::<f32>() / running_avg_mov.len() as f32;
+    //let max = running_avg_mov.clone().into_iter().reduce(f32::max).unwrap_or(0.);
+    //let min = running_avg_mov.into_iter().reduce(f32::min).unwrap_or(0.);
     println!(
         "wr @ depth {DEPTH}: wins (O's wins) {wro:.2}% -> {wins}/{total} 
         — losses (X's wins): {wrx:.2}% {losses}/{total}
         — draws: {drawper:.2}% {draws}/{total}
         — average total turns: {average_turns:.2} of {total_turns}",
+        /* — average possible moves: {average_possible_moves} of {total_moves} — {running_avg} {min}..{max} */
     );
 }
 
@@ -165,25 +174,27 @@ fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
     }
 }
 
-fn ai_playout() -> (u8, u8) {
+fn ai_playout() -> (u8, u8, u16) {
     let mut board = Board::new(true);
     //let mut board = Board::default();
     let ai = AI::default();
     let mut turns = 0;
+    let mut possible_moves = 0;
 
     //let mut rng = rand::rng();
     let mut rng = rand::prelude::SmallRng::seed_from_u64(7);
 
     loop {
         // random move
-        //let validbitfield = board.valid_moves_bitfield();
-        //let (row, column) = iterator::ValidMoveIterator::new(validbitfield)
+
+        //possible_moves += (board.valid_moves().collect::<Vec<(u8, u8)>>().len()) as u16;
         let (row, column) = board
             .valid_moves()
             .choose(&mut rng)
             .expect("should be able to get random move");
 
         // let (row, column) = aix.calculate_move_par(&board, DEPTH);
+        //valid_moves = board.valid_moves() 
         board.do_move(row, column, flag::X_PLAYER);
         turns += 1;
 
@@ -191,10 +202,11 @@ fn ai_playout() -> (u8, u8) {
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
             //println!("Game over: result {game_status}");
-            return (game_status, turns);
+            return (game_status, turns, possible_moves);
         }
 
         // ai move
+        //possible_moves += (board.valid_moves().collect::<Vec<(u8, u8)>>().len()) as u16;
         let (row, column) = ai.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
         turns += 1;
@@ -203,7 +215,7 @@ fn ai_playout() -> (u8, u8) {
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
             //println!("Game over: result {game_status}");
-            return (game_status, turns);
+            return (game_status, turns, possible_moves);
         }
     }
 }
