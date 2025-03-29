@@ -51,13 +51,10 @@ fn winrate_benchmark(c: &mut Criterion) {
     let mut total_turns = 0u32;
     //let mut total_moves = 0u32;
     //let mut running_avg_mov = Vec::new();
-    //let duration = std::time::Duration::from_secs(30);
 
-    // group.sample_size(10).measurement_time(duration);
-    //group.measurement_time(duration);
     group.bench_function("winrate", |b| {
         b.iter(|| {
-            let (status, turns, moves) = ai_playout();
+            let (status, turns, moves) = ai_playout(None);
             //let (status, turns) = ai_vs_ai(board.clone(), &aix, &aio);
             total_turns += turns as u32;
             //total_moves += moves as u32;
@@ -88,12 +85,13 @@ fn winrate_benchmark(c: &mut Criterion) {
     //let running_avg = running_avg_mov.iter().sum::<f32>() / running_avg_mov.len() as f32;
     //let max = running_avg_mov.clone().into_iter().reduce(f32::max).unwrap_or(0.);
     //let min = running_avg_mov.into_iter().reduce(f32::min).unwrap_or(0.);
+
     println!(
         "wr @ depth {DEPTH}: wins (O's wins) {wro:.2}% -> {wins}/{total} 
         — losses (X's wins): {wrx:.2}% {losses}/{total}
         — draws: {drawper:.2}% {draws}/{total}
         — average total turns: {average_turns:.2} of {total_turns}",
-        /* — average possible moves: {average_possible_moves} of {total_moves} — {running_avg} {min}..{max} */
+        //— average possible moves: {average_possible_moves} of {total_moves} — {running_avg} {min}..{max}",
     );
 }
 
@@ -174,15 +172,17 @@ fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
     }
 }
 
-fn ai_playout() -> (u8, u8, u16) {
+fn ai_playout(seed: Option<u64>) -> (u8, u8, u16) {
     let mut board = Board::new(true);
-    //let mut board = Board::default();
     let ai = AI::default();
     let mut turns = 0;
     let mut possible_moves = 0;
 
-    //let mut rng = rand::rng();
-    let mut rng = rand::prelude::SmallRng::seed_from_u64(7);
+    let mut rng = if let Some(seed) = seed {
+        rand::prelude::SmallRng::seed_from_u64(seed)
+    } else {
+        rand::prelude::SmallRng::from_rng(&mut rand::rng())
+    };
 
     loop {
         // random move
