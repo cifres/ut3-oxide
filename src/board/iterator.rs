@@ -17,6 +17,7 @@ impl Iterator for ValidMoveIterator {
         }
 
         let offset = self.bitfield.trailing_zeros() as u8;
+        // The internally generated bitfield should never have bits > 80.
         if offset >= 81 {
             return None;
         }

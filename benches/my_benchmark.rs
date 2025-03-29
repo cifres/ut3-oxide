@@ -52,9 +52,10 @@ fn winrate_benchmark(c: &mut Criterion) {
     //let mut total_moves = 0u32;
     //let mut running_avg_mov = Vec::new();
 
+    group.sample_size(20_000);
     group.bench_function("winrate", |b| {
         b.iter(|| {
-            let (status, turns, moves) = ai_playout(None);
+            let (status, turns, _moves) = ai_playout(None);
             //let (status, turns) = ai_vs_ai(board.clone(), &aix, &aio);
             total_turns += turns as u32;
             //total_moves += moves as u32;
@@ -176,7 +177,7 @@ fn ai_playout(seed: Option<u64>) -> (u8, u8, u16) {
     let mut board = Board::new(true);
     let ai = AI::default();
     let mut turns = 0;
-    let mut possible_moves = 0;
+    let possible_moves = 0;
 
     let mut rng = if let Some(seed) = seed {
         rand::prelude::SmallRng::seed_from_u64(seed)
