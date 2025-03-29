@@ -240,7 +240,7 @@ impl Board {
     /// ```
     // NOTE: hot function
     //#[inline(always)]
-    fn get_player_move_count_of(&self, miniboard: u8, player: u8) -> u8 {
+    pub fn get_player_move_count_of(&self, miniboard: u8, player: u8) -> u8 {
         // maps 1 => 22 and 2 => 26
         let player_flag = flag::MINIBOARD_MOVE_COUNT_X + (player - 1) * 4;
         debug_assert!(

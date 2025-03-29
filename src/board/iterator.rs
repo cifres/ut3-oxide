@@ -25,7 +25,14 @@ impl Iterator for ValidMoveIterator {
         self.bitfield ^= 1 << offset;
         Some((offset / 9, offset % 9))
     }
+
+    //fn size_hint(&self) -> (usize, Option<usize>) {
+    //    let size = self.bitfield.count_ones();
+    //    (size as usize, Some(size as usize))
+    //}
 }
+
+//impl ExactSizeIterator for ValidMoveIterator {}
 
 pub struct MiniboardStatusesIterator {
     pub bitfield: u32,

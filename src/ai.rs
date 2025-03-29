@@ -285,7 +285,10 @@ impl AI {
         // for every active miniboard, get its cells and check for near won patterns
         // NOTE: hot: this loop
         let active_miniboard_cells = (0..9).filter_map(|miniboard| {
-            if board.get_total_move_count_of(miniboard) > 1 {   // TODO: test > n live winrate variance
+            //if board.get_total_move_count_of(miniboard) > 1 {   // TODO: test > n live winrate variance
+            if board.get_player_move_count_of(miniboard, self.ai_shape) > 1
+                || board.get_player_move_count_of(miniboard, self.opponent_shape) > 1
+            {
                 Some(board.get_miniboard_cells(miniboard))
             } else {
                 None
