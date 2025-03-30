@@ -1,12 +1,23 @@
-use super::Board;
+use super::{Board, iterator::MiniboardStatusesIterator};
 use std::fmt::{self};
 
 impl Board {
     /// Create a mask where there are only 1s over the `18` bits for the u32 row
     /// with the remaining `14` being 0s to zero-out the row metadata.
-    const fn get_row_cells(&self, row: u8) -> u32 {
+    fn get_row_cells(&self, row: u8) -> u32 {
         let mask = (1 << 18) - 1;
         self.main_board[row as usize] & mask
+    }
+
+    pub fn display_mb_statuses(&self) {
+        for (i, mb) in MiniboardStatusesIterator::new(self.get_miniboard_statuses()).enumerate() {
+            if i % 3 == 0 {
+                println!();
+                print!("|");
+            }
+            print!(" {mb} |");
+        }
+        println!();
     }
 }
 

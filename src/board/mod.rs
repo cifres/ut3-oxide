@@ -1,7 +1,7 @@
+mod display;
+mod iterator;
+mod move_history;
 pub mod rules;
-pub mod display;
-pub mod iterator;
-pub mod move_history;
 
 use move_history::MoveHistory;
 
@@ -95,7 +95,6 @@ impl Board {
     /// # Example
     /// ```
     /// use ut3_oxide::board::Board;
-    /// use ut3_oxide::board::move_history::MoveHistory;
     ///
     /// let mut board_with_history = Board::new(true);
     /// let mut board_without = Board::new(false);
@@ -320,7 +319,7 @@ impl Board {
 
         self.set_player_move_count_of(miniboard, move_count + 1, player);
         self.set_total_move_count_of(miniboard, self.get_total_move_count_of(miniboard) + 1);
-        self.calculate_miniboard_status(miniboard);
+        _ = self.calculate_miniboard_status(miniboard);
     }
 
     // TODO move to impl board in move_history?
