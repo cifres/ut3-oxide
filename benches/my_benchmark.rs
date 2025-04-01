@@ -16,6 +16,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     //let mut board = Board::default();
     let ai = AI::default();
     let rng = rand::prelude::SmallRng::seed_from_u64(7);
+    //let rng = rand::prelude::SmallRng::from_rng(&mut rand::rng());
 
     do_random_moves(&mut board, rng);
 
@@ -44,7 +45,7 @@ fn winrate_benchmark(c: &mut Criterion) {
         b.iter(|| ai_single(board.clone(), &aio, rng.clone()));
     });
 
-    // winrate
+    // winrate: best 99.14%+ @ depth 5
     let mut wins = 0u16;
     let mut draws = 0u16;
     let mut losses = 0u16;
@@ -52,7 +53,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     //let mut total_moves = 0u32;
     //let mut running_avg_mov = Vec::new();
 
-    group.sample_size(20_000);
+    //group.sample_size(20_00);
     group.bench_function("winrate", |b| {
         b.iter(|| {
             let (status, turns, _moves) = ai_playout(None);
@@ -115,8 +116,6 @@ fn do_random_moves(board: &mut Board, mut rng: SmallRng) {
 fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
     loop {
         // random move
-        //let validbitfield = board.valid_moves_bitfield();
-        //let (row, column) = iterator::ValidMoveIterator::new(validbitfield)
         let (row, column) = board
             .valid_moves()
             .choose(&mut rng)
@@ -128,7 +127,6 @@ fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return game_status;
         }
 
@@ -139,7 +137,6 @@ fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return game_status;
         }
     }
@@ -155,7 +152,6 @@ fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return (game_status, turns);
         }
 
@@ -167,7 +163,6 @@ fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return (game_status, turns);
         }
     }
