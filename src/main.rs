@@ -49,7 +49,10 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
 
     for _ in 0..iterations {
         loop {
+            //let now = std::time::Instant::now();
             let (row, column) = ai_x.calculate_move_par(&board, depth_1);
+            //let elapsed = now.elapsed();
+            //println!("x: {:.2}", elapsed.as_micros());
             board.do_move(row, column, flag::X_PLAYER);
             total_turns += 1;
             let game_status = board.calculate_game_status();
@@ -59,7 +62,10 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
             }
 
             // ai move
+            //let now = std::time::Instant::now();
             let (row, column) = ai_o.calculate_move_par(&board, depth_2);
+            //let elapsed = now.elapsed();
+            //println!("o: {:.2}", elapsed.as_micros());
             board.do_move(row, column, 2);
             total_turns += 1;
 
