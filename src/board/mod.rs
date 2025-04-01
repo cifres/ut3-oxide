@@ -17,24 +17,6 @@ use move_history::MoveHistory;
 //  (7, 2) (7, 5) (7, 8)
 // mb -> (mb // 3) + (row * 3), (mb % 3) + col * 3
 
-const _MOVE_CORRESPONDING_MINIBOARD: [u8; 81] = {
-    let mut a = [0u8; 81];
-    let (mut y, mut x) = (0, 0);
-    while y < 9 {
-        while x < 9 {
-            let i = x + y * 9;
-            let miniboard = (x % 3 + (y % 3 * 3)) as u8;
-            a[i] = miniboard;
-
-            x += 1;
-        }
-        x = 0;
-        y += 1;
-    }
-
-    a
-};
-
 // TODO: precompute mask: size << offset
 #[allow(dead_code)]
 pub mod flag {
@@ -406,7 +388,7 @@ impl Board {
         debug_assert!(starting_column % 3 == 0 && starting_column <= 6);
 
         // do row by row, so
-        // for miniboard 4 -> [3,3 3,4 3,5] [4,3 4,4 4,5] [5,3 5,4 5,5]
+        // for miniboard 4 -> [(3,3) (3,4) (3,5)] [(4,3) (4,4) (4,5)] [(5,3) (5,4) (5,5)]
         // not cell by cell
         let col_offset = starting_column * 2;
         let columns_mask = 0b11_11_11 << col_offset;
