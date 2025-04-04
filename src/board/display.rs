@@ -26,6 +26,7 @@ impl fmt::Display for Board {
         // print the board with Xs and Os
         // (board:#)
         if f.alternate() {
+            writeln!(f, "— — — — — — — — — — — — —")?;
             for row in 0..9 {
                 for column in 0..9 {
                     let cell = self.get_cell(row, column);

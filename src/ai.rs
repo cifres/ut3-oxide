@@ -10,7 +10,7 @@ use crate::board::{
 
 // basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT:                   i16 = 10;
-const MINIBOARD_WIN_COUNT:          i16 = 24;
+const MINIBOARD_WIN_COUNT:          i16 = 24; // increase?
 const CENTRE_MB_CONTROL:            i16 = 25;
 const CENTRE_CELL_CONTROL:          i16 =  1;
 const FREE_MOVE_CELL_SAME_MB:       i16 =  3;
