@@ -2,14 +2,14 @@ mod ai;
 mod board;
 
 use ai::AI;
-use board::{flag, Board};
+use board::{Board, flag};
 use std::io::{self, Write};
 
 fn main() -> Result<(), std::io::Error> {
     let mut board = Board::new(true);
 
     let mut args = std::env::args();
-    _ = args.next();    // program name
+    _ = args.next(); // program name
     if args.len() == 0 {
         player_vs_ai(&mut board);
     } else {
@@ -118,7 +118,14 @@ fn player_vs_ai(board: &mut Board) {
 
     loop {
         let Some((row, column)) = ask_move(board) else {
+            print!("\x1B[2J\x1B[1;1H");
             println!("{board:#}");
+            println!("invalid!");
+            let (lr, lc) = board.last_move;
+            println!(
+                "{lr} {lc} move in -> {}",
+                Board::move_corresponding_miniboard(lr, lc)
+            );
             continue;
         };
 
@@ -158,7 +165,7 @@ fn player_vs_ai(board: &mut Board) {
 }
 
 fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
-    print!("Enter a move as \"row col\" like \"4 3\": ");
+    print!("Enter a move as \"rowcol\" like \"43\": ");
     let _ = io::stdout().flush();
 
     let mut input = String::new();
@@ -168,22 +175,39 @@ fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
 
     let input = input.trim_end();
     if input == "u" {
+        println!("Move undone!");
         // undo twice for the AI and the player
         board.undo_move();
         board.undo_move();
         return None;
     } else if input == "r" {
+        println!("Game reset!");
         board.reset();
         return None;
     } else if input == "q" {
+        println!("See ya! :)");
         std::process::exit(0);
     }
     //println!("\n{input}");
 
-    let [row, col, ..] = input
-        .split_whitespace()
-        .map(|sn| sn.parse().expect("Should have parsed the number {sn}"))
-        .collect::<Vec<u8>>()[..] else { unreachable!() };
+    //let [row, col, ..] = input
+    //    .split_whitespace()
+    //    .map(|sn| sn.parse().expect("Should have parsed the number {sn}"))
+    //    .collect::<Vec<u8>>()[..] else { return None };
+    
+    if input.len() != 2 {
+       return None; 
+    }
+
+    let split_at = input.split_at(1);
+    let (row, col): (u8, u8) = (
+        split_at.0.parse().unwrap_or(9),
+        split_at.1.parse().unwrap_or(9)
+    );
+
+    if row == 9 || col == 9 {
+        return None;
+    }
 
     Some((row, col))
 }
