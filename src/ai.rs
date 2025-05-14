@@ -215,19 +215,17 @@ impl AI {
 
         // println!("@ centre mb {score}");
 
+        // Produces repeating 0b001100 across the 18-bit range 
+        const REP_UNIT: u32 = ((1 << 18) - 1) / 0b111111;
+        let ai_centre_cell_mask = REP_UNIT * ((self.ai_shape as u32) << 2);
+        let opp_centre_cell_mask = REP_UNIT * ((self.opponent_shape as u32) << 2);
         // row-by-row get the centre cell of each miniboard
         // then check if ai or opp
         for row in (1..board.main_board.len()).step_by(3) {
             let row = board.main_board[row];
-            let first = ((row >> 2) & 0b11) as u8;
-            let middle = ((row >> 8) & 0b11) as u8;
-            let last = ((row >> 14) & 0b11) as u8;
-
-            score += ((((self.ai_shape == first) as i16) - (self.opponent_shape == first) as i16)
-                + (((self.ai_shape == middle) as i16) - (self.opponent_shape == middle) as i16)
-                + (((self.ai_shape == last) as i16) - (self.opponent_shape == last) as i16))
-                * SCORE_UNIT
-                * CENTRE_CELL_CONTROL;
+            let aicnt = (row & ai_centre_cell_mask).count_ones() as i16;
+            let oppcnt = (row & opp_centre_cell_mask).count_ones() as i16;
+            score += (aicnt - oppcnt) * SCORE_UNIT * CENTRE_CELL_CONTROL;
         }
 
         // println!("@ centre cell {score}");
