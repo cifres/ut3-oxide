@@ -26,14 +26,14 @@ impl fmt::Display for Board {
         // print the board with Xs and Os
         // (board:#)
         if f.alternate() {
-            writeln!(f, "— — — — — — — — — — — — —")?;
+            writeln!(f, "┌───────┬───────┬───────┐")?;
             for row in 0..9 {
                 for column in 0..9 {
                     let cell = self.get_cell(row, column);
                     //write!(f, "{row},{column} ")?;
                     //write!(f, "{:01} ", column + (row * 3) * 3)?;
                     if column == 0 {
-                        write!(f, "| ")?
+                        write!(f, "│ ")?
                     }
 
                     if cell == 1 {
@@ -41,16 +41,21 @@ impl fmt::Display for Board {
                     } else if cell == 2 {
                         write!(f, "O ")?;
                     } else {
-                        write!(f, "_ ")?;
+                        write!(f, "─ ")?;
                     }
 
                     if (column + 1) % 3 == 0 {
-                        write!(f, "| ")?;
+                        write!(f, "│ ")?;
                     }
                 }
                 writeln!(f)?;
+
                 if (row + 1) % 3 == 0 {
-                    writeln!(f, "— — — — — — — — — — — — —")?;
+                    if row == 8 {
+                        writeln!(f, "└───────┴───────┴───────┘")?;
+                    } else {
+                        writeln!(f, "├───────┼───────┼───────┤")?;
+                    }
                 }
             }
 
