@@ -30,8 +30,6 @@ impl fmt::Display for Board {
             for row in 0..9 {
                 for column in 0..9 {
                     let cell = self.get_cell(row, column);
-                    //write!(f, "{row},{column} ")?;
-                    //write!(f, "{:01} ", column + (row * 3) * 3)?;
                     if column == 0 {
                         write!(f, "│ ")?
                     }
@@ -41,7 +39,13 @@ impl fmt::Display for Board {
                     } else if cell == 2 {
                         write!(f, "O ")?;
                     } else {
+                        if self.is_valid_move(row, column) {
+                            write!(f , "\x1b[0;32m")?;
+                        }
                         write!(f, "─ ")?;
+                        if self.is_valid_move(row, column) {
+                            write!(f , "\x1b[0m")?;
+                        }
                     }
 
                     if (column + 1) % 3 == 0 {
@@ -58,6 +62,8 @@ impl fmt::Display for Board {
                     }
                 }
             }
+            // TODO: confidence
+            // writeln!(f, "███████░░░░░░░▒▒▒▒▒▓▓▓▓")?;
 
             Ok(())
         } else {
