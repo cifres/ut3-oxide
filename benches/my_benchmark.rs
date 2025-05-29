@@ -45,7 +45,7 @@ fn winrate_benchmark(c: &mut Criterion) {
         b.iter(|| ai_single(board.clone(), &aio, rng.clone()));
     });
 
-    // winrate: best 99.14%+ @ depth 5
+    // winrate: best 99.21% @ depth 5
     let mut wins = 0u16;
     let mut draws = 0u16;
     let mut losses = 0u16;
@@ -131,7 +131,7 @@ fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
         }
 
         // ai move
-        let (row, column) = ai.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = ai.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
 
         // check
@@ -145,7 +145,7 @@ fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
 fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
     let mut turns = 0;
     loop {
-        let (row, column) = aix.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = aix.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::X_PLAYER);
         turns += 1;
 
@@ -156,7 +156,7 @@ fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
         }
 
         // ai move
-        let (row, column) = aio.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = aio.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
         turns += 1;
 
@@ -203,7 +203,7 @@ fn ai_playout(seed: Option<u64>) -> (u8, u8, u16) {
 
         // ai move
         //possible_moves += (board.valid_moves().collect::<Vec<(u8, u8)>>().len()) as u16;
-        let (row, column) = ai.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = ai.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
         turns += 1;
 

@@ -50,7 +50,7 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
     for _ in 0..iterations {
         loop {
             //let now = std::time::Instant::now();
-            let (row, column) = ai_x.calculate_move_par(&board, depth_1);
+            let (_, (row, column)) = ai_x.calculate_move_par(&board, depth_1);
             //let elapsed = now.elapsed();
             //println!("x: {:.2}", elapsed.as_micros());
             board.do_move(row, column, flag::X_PLAYER);
@@ -63,7 +63,7 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
 
             // ai move
             //let now = std::time::Instant::now();
-            let (row, column) = ai_o.calculate_move_par(&board, depth_2);
+            let (_, (row, column)) = ai_o.calculate_move_par(&board, depth_2);
             //let elapsed = now.elapsed();
             //println!("o: {:.2}", elapsed.as_micros());
             board.do_move(row, column, 2);
@@ -130,6 +130,7 @@ fn player_vs_ai(board: &mut Board) {
         };
 
         if !board.is_valid_move(row, column) {
+            print!("\x1B[2J\x1B[1;1H");
             println!("{board:#}");
             println!("invalid!");
             continue;
@@ -138,6 +139,7 @@ fn player_vs_ai(board: &mut Board) {
         board.do_move(row, column, 1);
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
+            _ = io::stdout().flush();
             println!("Game over: result {game_status}");
             board.display_mb_statuses();
             break;
@@ -145,17 +147,22 @@ fn player_vs_ai(board: &mut Board) {
 
         // println!("{board:#}");
         // ai move
-        let (row, column) = ai_x.calculate_move_par(board, 8);
+        let now = std::time::Instant::now();
+        let (eval, (row, column)) = ai_x.calculate_move_par(board, 5);
+        let elapsed = now.elapsed();
         board.do_move(row, column, 2);
 
         print!("\x1B[2J\x1B[1;1H");
         println!("{board:#}");
         println!(
-            "{row} {column} move in -> {}",
-            Board::move_corresponding_miniboard(row, column)
+            "{row} {column} move in -> {} ({} ms | {} μs)",
+            Board::move_corresponding_miniboard(row, column),
+            elapsed.as_millis(),
+            elapsed.as_micros(),
+            
         );
 
-        let eval = ai_x.evaluate(board);
+        // let eval = ai_x.evaluate(board);
         let norm = normalise(eval as f32, -2300., 2300.);
         println!("score: {eval} -> {:.2}", norm);
         eval_bar(norm, 30);
