@@ -157,6 +157,7 @@ fn player_vs_ai(board: &mut Board) {
 
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
+            _ = io::stdout().flush();
             println!("Game over: result {game_status}");
             board.display_mb_statuses();
             break;
