@@ -88,10 +88,10 @@ impl AI {
     /// # use ut3_oxide::{board::Board, ai::AI};
     /// let mut board = Board::default();
     /// let aio = AI::default();
-    /// let (row, column) = aio.calculate_move_par(&board, 5);
+    /// let (eval, ((row, column))) = aio.calculate_move_par(&board, 5);
     /// board.do_move(row, column, 2);  // 2 represents O
     /// ```
-    pub fn calculate_move_par(&self, board: &Board, depth: u8) -> (u8, u8) {
+    pub fn calculate_move_par(&self, board: &Board, depth: u8) -> (i16, (u8, u8)) {
         let depth = if depth > 0 { depth } else { DEPTH };
 
         let bstmv = board.valid_moves()
@@ -106,7 +106,7 @@ impl AI {
 
         //println!("{bstmv:?}");
         //println!("best {best_move:?} score {best_score} at depth {DEPTH}");
-        bstmv.expect("a move should've been selected").1
+        bstmv.expect("a move should've been selected")
     }
 
     /// Returns the evaluation of the current state after simulating moves till `depth`
