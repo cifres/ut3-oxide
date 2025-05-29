@@ -33,20 +33,23 @@ impl fmt::Display for Board {
                     if column == 0 {
                         write!(f, "│ ")?
                     }
+                    let mvmbstatus = self.get_status_of(Self::move_miniboard(row, column));
 
-                    if cell == 1 {
-                        write!(f, "X ")?;
-                    } else if cell == 2 {
-                        write!(f, "O ")?;
-                    } else {
-                        if self.is_valid_move(row, column) {
-                            write!(f , "\x1b[0;32m")?;
-                        }
-                        write!(f, "─ ")?;
-                        if self.is_valid_move(row, column) {
-                            write!(f , "\x1b[0m")?;
-                        }
-                    }
+                    let repr = match (cell, mvmbstatus) {
+                       (0, _) if self.is_valid_move(row, column) => "\x1b[32m─ \x1b[0m",
+                       (0, 1) => "\x1b[44m_ \x1b[0m",
+                       (0, 2) => "\x1b[41m_ \x1b[0m",
+                       (1, 1) => "\x1b[44mX \x1b[0m",
+                       (2, 2) => "\x1b[41mO \x1b[0m",
+                       (1, 2) => "\x1b[41mX \x1b[0m",
+                       (2, 1) => "\x1b[44mO \x1b[0m",
+                       (0, _) => "─ ",
+                       (1, _) => "\x1b[0;34mX \x1b[0m",
+                       (2, _) => "\x1b[0;31mO \x1b[0m",
+                        _ => unreachable!(),
+                    };
+
+                    write!(f, "{repr}")?;
 
                     if (column + 1) % 3 == 0 {
                         write!(f, "│ ")?;
