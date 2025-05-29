@@ -19,6 +19,8 @@ const CONTINUOUS_MB_LINES:          i16 =  3;
 const BROKEN_MB_LINES:              i16 =  2;
 const CONTINUOUS_CELL_LINES:        i16 =  2;
 const BROKEN_CELL_LINES:            i16 =  1;
+// const N: u16 = 7 * 24 + 25 + 9 + 9 * 3 - (9 * 3) + (3 * 7) + (3 * 4) + (2 * 7) + (2 * 4);
+
 // NOTE: continuous lines count in both directions despite the overlap
 // whereas broken ones count once only.
 // TODO: rename continuous and broken lines?

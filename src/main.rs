@@ -145,7 +145,7 @@ fn player_vs_ai(board: &mut Board) {
 
         // println!("{board:#}");
         // ai move
-        let (row, column) = ai_x.calculate_move_par(board, 7);
+        let (row, column) = ai_x.calculate_move_par(board, 8);
         board.do_move(row, column, 2);
 
         print!("\x1B[2J\x1B[1;1H");
@@ -154,6 +154,11 @@ fn player_vs_ai(board: &mut Board) {
             "{row} {column} move in -> {}",
             Board::move_corresponding_miniboard(row, column)
         );
+
+        let eval = ai_x.evaluate(board);
+        let norm = normalise(eval as f32, -2300., 2300.);
+        println!("score: {eval} -> {:.2}", norm);
+        eval_bar(norm, 30);
 
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
@@ -211,4 +216,29 @@ fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
     }
 
     Some((row, col))
+}
+
+fn normalise(n: f32, min: f32, max: f32) -> f32 {
+    let n = n.clamp(min, max);
+    (n - min) / (max - min)
+}
+
+#[test]
+fn norm() {
+    println!("{:.2}", normalise(100., 1., 200.));
+    println!("{:.2}", normalise(100., -50., 2000.));
+}
+
+fn eval_bar(norm: f32, width: u8) {
+    const BASE_BAR: &str = "\x1b[34m█\x1b[0m";
+    let base = BASE_BAR.repeat(width as usize);
+    let s = base.replacen(BASE_BAR, "\x1b[31m█\x1b[0m", (norm * width as f32).round() as usize);
+    println!("{s}");
+}
+
+#[test]
+fn evalbar() {
+    eval_bar(0.3, 30);
+    eval_bar(0.4, 30);
+    eval_bar(0.05, 30);
 }
