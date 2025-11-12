@@ -16,6 +16,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     //let mut board = Board::default();
     let ai = AI::default();
     let rng = rand::prelude::SmallRng::seed_from_u64(7);
+    //let rng = rand::prelude::SmallRng::from_rng(&mut rand::rng());
 
     do_random_moves(&mut board, rng);
 
@@ -44,7 +45,7 @@ fn winrate_benchmark(c: &mut Criterion) {
         b.iter(|| ai_single(board.clone(), &aio, rng.clone()));
     });
 
-    // winrate
+    // winrate: best 99.21% @ depth 5
     let mut wins = 0u16;
     let mut draws = 0u16;
     let mut losses = 0u16;
@@ -52,9 +53,10 @@ fn winrate_benchmark(c: &mut Criterion) {
     //let mut total_moves = 0u32;
     //let mut running_avg_mov = Vec::new();
 
+    //group.sample_size(20_00);
     group.bench_function("winrate", |b| {
         b.iter(|| {
-            let (status, turns, moves) = ai_playout(None);
+            let (status, turns, _moves) = ai_playout(None);
             //let (status, turns) = ai_vs_ai(board.clone(), &aix, &aio);
             total_turns += turns as u32;
             //total_moves += moves as u32;
@@ -114,8 +116,6 @@ fn do_random_moves(board: &mut Board, mut rng: SmallRng) {
 fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
     loop {
         // random move
-        //let validbitfield = board.valid_moves_bitfield();
-        //let (row, column) = iterator::ValidMoveIterator::new(validbitfield)
         let (row, column) = board
             .valid_moves()
             .choose(&mut rng)
@@ -127,18 +127,16 @@ fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return game_status;
         }
 
         // ai move
-        let (row, column) = ai.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = ai.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
 
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return game_status;
         }
     }
@@ -147,26 +145,24 @@ fn ai_single(mut board: Board, ai: &AI, mut rng: SmallRng) -> u8 {
 fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
     let mut turns = 0;
     loop {
-        let (row, column) = aix.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = aix.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::X_PLAYER);
         turns += 1;
 
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return (game_status, turns);
         }
 
         // ai move
-        let (row, column) = aio.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = aio.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
         turns += 1;
 
         // check
         let game_status = board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
-            //println!("Game over: result {game_status}");
             return (game_status, turns);
         }
     }
@@ -176,7 +172,7 @@ fn ai_playout(seed: Option<u64>) -> (u8, u8, u16) {
     let mut board = Board::new(true);
     let ai = AI::default();
     let mut turns = 0;
-    let mut possible_moves = 0;
+    let possible_moves = 0;
 
     let mut rng = if let Some(seed) = seed {
         rand::prelude::SmallRng::seed_from_u64(seed)
@@ -207,7 +203,7 @@ fn ai_playout(seed: Option<u64>) -> (u8, u8, u16) {
 
         // ai move
         //possible_moves += (board.valid_moves().collect::<Vec<(u8, u8)>>().len()) as u16;
-        let (row, column) = ai.calculate_move_par(&board, DEPTH);
+        let (_, (row, column)) = ai.calculate_move_par(&board, DEPTH);
         board.do_move(row, column, flag::O_PLAYER);
         turns += 1;
 

@@ -1,12 +1,23 @@
-use super::Board;
+use super::{Board, iterator::MiniboardStatusesIterator};
 use std::fmt::{self};
 
 impl Board {
     /// Create a mask where there are only 1s over the `18` bits for the u32 row
     /// with the remaining `14` being 0s to zero-out the row metadata.
-    const fn get_row_cells(&self, row: u8) -> u32 {
+    fn get_row_cells(&self, row: u8) -> u32 {
         let mask = (1 << 18) - 1;
         self.main_board[row as usize] & mask
+    }
+
+    pub fn display_mb_statuses(&self) {
+        for (i, mb) in MiniboardStatusesIterator::new(self.get_miniboard_statuses()).enumerate() {
+            if i % 3 == 0 {
+                println!();
+                print!("|");
+            }
+            print!(" {mb} |");
+        }
+        println!();
     }
 }
 
@@ -15,32 +26,47 @@ impl fmt::Display for Board {
         // print the board with Xs and Os
         // (board:#)
         if f.alternate() {
+            writeln!(f, "┌───────┬───────┬───────┐")?;
             for row in 0..9 {
                 for column in 0..9 {
                     let cell = self.get_cell(row, column);
-                    //write!(f, "{row},{column} ")?;
-                    //write!(f, "{:01} ", column + (row * 3) * 3)?;
                     if column == 0 {
-                        write!(f, "| ")?
+                        write!(f, "│ ")?
                     }
+                    let mvmbstatus = self.get_status_of(Self::move_miniboard(row, column));
 
-                    if cell == 1 {
-                        write!(f, "X ")?;
-                    } else if cell == 2 {
-                        write!(f, "O ")?;
-                    } else {
-                        write!(f, "_ ")?;
-                    }
+                    let repr = match (cell, mvmbstatus) {
+                       (0, _) if self.is_valid_move(row, column) => "\x1b[32m─ \x1b[0m",
+                       (0, 1) => "\x1b[44m_ \x1b[0m",
+                       (0, 2) => "\x1b[41m_ \x1b[0m",
+                       (1, 1) => "\x1b[44mX \x1b[0m",
+                       (2, 2) => "\x1b[41mO \x1b[0m",
+                       (1, 2) => "\x1b[41mX \x1b[0m",
+                       (2, 1) => "\x1b[44mO \x1b[0m",
+                       (0, _) => "─ ",
+                       (1, _) => "\x1b[0;34mX \x1b[0m",
+                       (2, _) => "\x1b[0;31mO \x1b[0m",
+                        _ => unreachable!(),
+                    };
+
+                    write!(f, "{repr}")?;
 
                     if (column + 1) % 3 == 0 {
-                        write!(f, "| ")?;
+                        write!(f, "│ ")?;
                     }
                 }
                 writeln!(f)?;
+
                 if (row + 1) % 3 == 0 {
-                    writeln!(f, "— — — — — — — — — — — — —")?;
+                    if row == 8 {
+                        writeln!(f, "└───────┴───────┴───────┘")?;
+                    } else {
+                        writeln!(f, "├───────┼───────┼───────┤")?;
+                    }
                 }
             }
+            // TODO: confidence
+            // writeln!(f, "███████░░░░░░░▒▒▒▒▒▓▓▓▓")?;
 
             Ok(())
         } else {
