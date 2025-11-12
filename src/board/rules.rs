@@ -169,7 +169,7 @@ impl Board {
     /// Short-circuits and stops as soon as any winning line is found
     /// Use with `get_status_of(miniboard: u8)`
     /// i.e, `flag::STATUS_X_WIN`, `flag::STATUS_O_WIN`, or `flag::STATUS_DRAW`
-    /// # Example 
+    /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
     /// let mut board = Board::default();
@@ -266,7 +266,7 @@ impl Board {
     // Compare against last player's move only for masking
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
     /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
-    /// # Example 
+    /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
     /// let mut board = Board::default();

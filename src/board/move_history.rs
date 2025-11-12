@@ -87,11 +87,14 @@ impl Default for MoveHistory {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{flag, Board};
+    use super::super::{Board, flag};
 
     #[test]
     fn undo_move() {
         let mut board = Board::new(true);
+        // ensure undo on the first move doesn't err
+        board.undo_move();
+        board.undo_move();
 
         /* 2 moves: same row, but 2 miniboards of 4 and 5 */
         board.do_move(4, 4, 2);
