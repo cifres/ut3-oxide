@@ -1,4 +1,4 @@
-use super::{flag, iterator::ValidMoveIterator, Board};
+use super::{Board, flag, iterator::ValidMoveIterator};
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
     const ROW_LINE: [(u8, u8); 9] = const {
@@ -55,7 +55,7 @@ impl Board {
     /// * miniboard is 'uncontestable' i.e. won by X or O, or drawn
     /// * miniboard coords don't correspond to last move
     /// * exception: corresponding board is uncontestable -- then we play anywhere else where a cells is
-    ///     empty, and its board is contestable
+    ///   empty, and its board is contestable
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
@@ -148,13 +148,12 @@ impl Board {
     }
 
     /// Returns if the first move has yet to be made
-    fn is_first_move(&self) -> bool {
+    /// Simply checks if the latest move made was `empty`, i.e. not `X` or `O`
+    pub(crate) fn is_first_move(&self) -> bool {
         let (last_row, last_column) = self.last_move;
         let last_cell = self.get_cell(last_row, last_column);
 
         last_cell == flag::EMPTY
-
-        //last_row == flag::NEW_GAME
     }
 
     /// Returns an iterator yielding valid `moves` as `(row, column)`
