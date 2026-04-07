@@ -159,7 +159,6 @@ fn player_vs_ai(board: &mut Board) {
             Board::move_corresponding_miniboard(row, column),
             elapsed.as_millis(),
             elapsed.as_micros(),
-            
         );
 
         // let eval = ai_x.evaluate(board);
@@ -207,15 +206,15 @@ fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
     //    .split_whitespace()
     //    .map(|sn| sn.parse().expect("Should have parsed the number {sn}"))
     //    .collect::<Vec<u8>>()[..] else { return None };
-    
+
     if input.len() != 2 {
-       return None; 
+        return None;
     }
 
     let split_at = input.split_at(1);
     let (row, col): (u8, u8) = (
         split_at.0.parse().unwrap_or(9),
-        split_at.1.parse().unwrap_or(9)
+        split_at.1.parse().unwrap_or(9),
     );
 
     if row == 9 || col == 9 {
@@ -239,7 +238,11 @@ fn norm() {
 fn eval_bar(norm: f32, width: u8) {
     const BASE_BAR: &str = "\x1b[34m█\x1b[0m";
     let base = BASE_BAR.repeat(width as usize);
-    let s = base.replacen(BASE_BAR, "\x1b[31m█\x1b[0m", (norm * width as f32).round() as usize);
+    let s = base.replacen(
+        BASE_BAR,
+        "\x1b[31m█\x1b[0m",
+        (norm * width as f32).round() as usize,
+    );
     println!("{s}");
 }
 

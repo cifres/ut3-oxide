@@ -194,6 +194,7 @@ mod tests {
             board.undo_move()
         }
 
+        assert!(board.is_first_move());
         assert_eq!(board.last_move, (0, 0));
         assert_eq!(board.xo_miniboard_win_count, 0);
         assert_eq!(board.main_board.iter().sum::<u32>(), 0);
