@@ -513,3 +513,83 @@ fn mb_status_iter() {
     }
 }
 
+#[test]
+fn board_str_to_board() {
+    use super::BoardParseError::*;
+
+    let board1 = Board {
+        main_board: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        ..Default::default()
+    };
+
+    let board2 = Board {
+        main_board: [4294967295, 1, 2, 3, 4, 5, 6, 7, 8],
+        last_move: (4, 3),
+        xo_miniboard_win_count: 2,
+        move_history: None
+    };
+
+    let board3 = Board {
+        main_board: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        last_move: (8, 8),
+        xo_miniboard_win_count: 10,
+        move_history: None
+    };
+
+
+    // NOTE: technically, `board3` is an invalid board state because last_move is 8, 8 but the
+    // final row is 8 or 0b1000 and thus doesn't represent that state
+
+    let cases = [
+        ("0:1:2:3:4:5:6:7:8:0:0:0"              , Ok(board1)),
+        ("4294967295:1:2:3:4:5:6:7:8:4:3:2"     , Ok(board2)),
+        ("0:1:2:3:4:5:6:7:8"                    , Err(MissingLastMoveRow)),
+        ("0:1:2:3:4:5:6:7:8:7"                  , Err(MissingLastMoveCol)),
+        ("0:1:200000000000000000000:3:4:5:6:7:8", Err(RowNotU32)),
+        ("0:4294967296:2:3:4:5:6:7:8"           , Err(RowNotU32)),
+        ("0:1:2:3:6:7"                          , Err(RowCountInsufficient)),
+        ("1:2:3::6:7:8"                         , Err(RowNotU32)),
+        ("1:2:3::6:7:8:9"                       , Err(RowNotU32)),
+        ("1:2:3::6:7:8:9:10:11"                 , Err(RowNotU32)),
+        ("0:1:2:3:4:5:6:7:8:10:11"              , Err(InvalidMoveCoordinates)),
+        ("0:1:2:3:4:5:6:7:8:8:8:10"             , Ok(board3)),
+        ("0:1:2:3:4:5:6:7:8:8:8:10:7"           , Err(ExcessiveArguments)),
+    ];
+
+    for (case, expected) in cases {
+        let board = Board::try_from(case);
+        println!("{case:?} {expected:?} {board:?}");
+        match board {
+            Ok(board) => assert_eq!(board, expected.unwrap()),
+            Err(e) => assert!(expected.is_err_and(|x| x == e))
+        }
+    }
+}
+
+#[test]
+fn board_to_parsing_string() {
+
+    // Default is 9 rows + 2 last_move coords + xo_mb_wincount = 12 zeroes
+    assert_eq!(Board::default().to_parsing_string(), "0:0:0:0:0:0:0:0:0:0:0:0");
+
+    let board = Board {
+        main_board: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        ..Default::default()
+    };
+    assert_eq!(board.to_parsing_string(), "0:1:2:3:4:5:6:7:8:0:0:0");
+
+    let board = Board {
+        main_board: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        last_move: (5, 6),
+        ..Default::default()
+    };
+    assert_eq!(board.to_parsing_string(), "0:1:2:3:4:5:6:7:8:5:6:0");
+
+    let board = Board {
+        main_board: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        last_move: (5, 6),
+        xo_miniboard_win_count: 3,
+        ..Default::default()
+    };
+    assert_eq!(board.to_parsing_string(), "0:1:2:3:4:5:6:7:8:5:6:3");
+}

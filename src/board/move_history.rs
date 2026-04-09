@@ -3,7 +3,7 @@ type Move = (u8, u8);
 /// This enables undoing moves.
 /// Uses separate arrays/vecs to track the row affected, and its index.
 /// Snapshots the relevant board state immediately before `board.do_move` to surgically revert changes
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MoveHistory {
     i: u8,
     cell: [Move; 81],
