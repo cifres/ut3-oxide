@@ -19,6 +19,19 @@ impl Board {
         }
         println!();
     }
+
+    pub fn to_parsing_string(&self) -> String {
+        let mut board_str = self.main_board.iter().fold(String::with_capacity(50), |mut acc, row| {
+            acc.push_str(format!("{row}:").as_str());
+            acc
+        });
+
+        board_str.push_str(&format!("{}:", self.last_move.0));
+        board_str.push_str(&format!("{}:", self.last_move.1));
+        board_str.push_str(&format!("{}", self.xo_miniboard_win_count));
+
+        board_str
+    }
 }
 
 impl fmt::Display for Board {
@@ -65,8 +78,6 @@ impl fmt::Display for Board {
                     }
                 }
             }
-            // TODO: confidence
-            // writeln!(f, "███████░░░░░░░▒▒▒▒▒▓▓▓▓")?;
 
             Ok(())
         } else {

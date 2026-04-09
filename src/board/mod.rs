@@ -47,7 +47,7 @@ pub mod flag {
 ///     * meta data `[0000 — 0000 — 0000 — 00]`
 ///         * `4` bits move_count_total — move_count o `4` bits — move_count x `4` bits — miniboard_status `2` bits
 /// xo_miniboard_win_count: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Board {
     pub main_board: [u32; 9],
     pub(crate) last_move: (u8, u8), // The last valid move that was made
@@ -417,6 +417,8 @@ impl Board {
     }
 
     /// Returns the miniboard statuses and packs them into a `u32`
+    /// starting with the least significant bit for miniboard `0`
+    /// <- Minboard 8 --- Miniboard 0 ->
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
@@ -455,6 +457,121 @@ impl Default for Board {
             xo_miniboard_win_count: 0,
             move_history: None,
         }
+    }
+}
+
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum BoardParseError {
+    RowCountInsufficient,
+    ExcessiveArguments,
+    RowNotU32,
+    MissingLastMoveRow,
+    MissingLastMoveCol,
+    LastMoveRowNotU8,
+    LastMoveColNotU8,
+    MbWinCountParseError(std::num::ParseIntError),
+    MissingMbWincount,
+    InvalidMoveCoordinates,
+    InvalidMbWinCount,
+}
+
+impl std::fmt::Display for BoardParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+
+impl From<Board> for String {
+    fn from(board: Board) -> Self {
+        let mut board_str = board.main_board.iter().fold(String::with_capacity(50), |mut acc, row| {
+            acc.push_str(format!("{row}:").as_str());
+            acc
+        });
+
+        board_str.push_str(&format!("{}:", board.last_move.0));
+        board_str.push_str(&format!("{}:", board.last_move.1));
+        board_str.push_str(&format!("{}", board.xo_miniboard_win_count));
+
+        board_str
+    }
+}
+
+// TODO: Ensure each number is within the valid range e.g. lastmove < (9, 9), mbwincount <= 7 
+impl TryFrom<&str> for Board {
+    type Error = BoardParseError;
+
+    /// Format: `[row 0–8]:lastmove_row:lastmove_col:xo_miniboard_wincount`
+    /// Excludes move_history
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        use BoardParseError::*;
+        let mut split = value.split(':');
+
+        // Main board
+        let mut main_board: [u32; 9] = [0; 9];
+
+        for row in &mut main_board {
+            *row = split
+                .next()
+                .ok_or(RowCountInsufficient)?
+                .parse()
+                .map_err(|_| RowNotU32)?;
+        }
+
+        // last move row col
+        let last_move = (
+            split
+                .next()
+                .ok_or(MissingLastMoveRow)?
+                .parse::<u8>()
+                .map_err(|_| LastMoveRowNotU8)?,
+            split
+                .next()
+                .ok_or(MissingLastMoveCol)?
+                .parse::<u8>()
+                .map_err(|_| LastMoveColNotU8)?
+        );
+
+        let (0..=8, 0..=8) = last_move else {
+            return Err(InvalidMoveCoordinates);
+        };
+
+        // xo miniboard wincount
+        let xo_miniboard_win_count = split
+            .next()
+            .ok_or(MissingMbWincount)?
+            .parse::<u8>()
+            .map_err(MbWinCountParseError)?;
+
+        // validate
+        let xo_mbw = xo_miniboard_win_count;
+        const PLAYER_X_FLAG: u8 = (flag::X_PLAYER - 1) * 3;
+        const PLAYER_O_FLAG: u8 = (flag::O_PLAYER - 1) * 3;
+        let playerx_mbw = (xo_mbw & (0b111 << PLAYER_X_FLAG)) >> PLAYER_X_FLAG;
+        let playero_mbw = (xo_mbw & (0b111 << PLAYER_O_FLAG)) >> PLAYER_O_FLAG;
+
+        let (0..=7, 0..=7, 0..=9, true) = (
+            playerx_mbw,
+            playero_mbw,
+            playero_mbw + playero_mbw,
+            xo_mbw < 0b00_111_111,
+        ) else {
+            return Err(InvalidMbWinCount);
+        };
+
+        if split.next().is_some() {
+            return Err(ExcessiveArguments);
+        }
+
+        let board = Board {
+            main_board,
+            last_move,
+            xo_miniboard_win_count,
+            move_history: None,
+        };
+
+        Ok(board)
     }
 }
 
