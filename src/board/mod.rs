@@ -1,9 +1,7 @@
 mod display;
 mod iterator;
-mod move_history;
+pub mod move_tracker;
 pub mod rules;
-
-use move_history::MoveHistory;
 
 // TODO: move miniboard, move_corresponding_miniboard, miniboard_starting_coord lookup tables
 // miniboard 1d -> miniboard 2d:     mb // 3, mb % 3
@@ -19,24 +17,24 @@ use move_history::MoveHistory;
 
 #[allow(dead_code)]
 pub mod flag {
-    pub const MINIBOARD_STATUS                  : u8 = 18;
-    pub(crate) const STATUS_BIT_SIZE            : u8 = 0b11;
-    pub const STATUS_CONTESTABLE                : u8 = 0;
-    pub const STATUS_X_WIN                      : u8 = 1;
-    pub const STATUS_O_WIN                      : u8 = 2;
-    pub const STATUS_DRAW                       : u8 = 3;
+    pub const MINIBOARD_STATUS                 : u8 = 18;
+    pub(crate) const STATUS_BIT_SIZE           : u8 = 0b11;
+    pub const STATUS_CONTESTABLE               : u8 = 0;
+    pub const STATUS_X_WIN                     : u8 = 1;
+    pub const STATUS_O_WIN                     : u8 = 2;
+    pub const STATUS_DRAW                      : u8 = 3;
 
-    pub(crate) const MINIBOARD_MOVE_COUNT_X     : u8 = 20;
-    pub(crate) const MINIBOARD_MOVE_COUNT_O     : u8 = 24;
-    pub(crate) const MINIBOARD_MOVE_COUNT_TOTAL : u8 = 28;
-    pub(crate) const MOVE_COUNT_BIT_SIZE        : u8 = 0b1111;
+    pub(crate) const MINIBOARD_MOVE_COUNT_X    : u8 = 20;
+    pub(crate) const MINIBOARD_MOVE_COUNT_O    : u8 = 24;
+    pub(crate) const MINIBOARD_MOVE_COUNT_TOTAL: u8 = 28;
+    pub(crate) const MOVE_COUNT_BIT_SIZE       : u8 = 0b1111;
 
     // value that's > 9 but is (NEW_GAME + NEW_GAME * 9) < u8::MAX --  NOTE: not stable yet
-    pub const NEW_GAME                          : u8 = 0;
+    pub const NEW_GAME                         : u8 = 0;
 
-    pub const EMPTY                             : u8 = 0;
-    pub const X_PLAYER                          : u8 = 1;
-    pub const O_PLAYER                          : u8 = 2;
+    pub const EMPTY                            : u8 = 0;
+    pub const X_PLAYER                         : u8 = 1;
+    pub const O_PLAYER                         : u8 = 2;
 }
 
 /// `u32` board row format:
@@ -47,52 +45,31 @@ pub mod flag {
 ///     * meta data `[0000 — 0000 — 0000 — 00]`
 ///         * `4` bits move_count_total — move_count o `4` bits — move_count x `4` bits — miniboard_status `2` bits
 /// xo_miniboard_win_count: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board {
     pub main_board: [u32; 9],
-    pub(crate) last_move: (u8, u8), // The last valid move that was made
-    pub(crate) xo_miniboard_win_count: u8,
-    pub move_history: Option<MoveHistory>,
-}
-
-impl Clone for Board {
-    /// Clones the `Board` apart from the `move_history`.
-    /// move_history is an expensive clone thus, if you wish to clone it too
-    /// use `clone_with_history`
-    fn clone(&self) -> Self {
-        Self {
-            main_board: self.main_board,
-            last_move: self.last_move,
-            xo_miniboard_win_count: self.xo_miniboard_win_count,
-            move_history: None,
-        }
-    }
+    pub last_move: (u8, u8), // The last valid move that was made
+    pub xo_miniboard_win_count: u8,
 }
 
 impl Board {
-    /// Creates a new, empty `Board` with or without move history.
+    /// Creates a new, empty `Board`.
     ///
-    /// # Example
+    // # Example
     /// ```
     /// use ut3_oxide::board::Board;
     ///
-    /// let mut board_with_history = Board::new(true);
-    /// let mut board_without = Board::new(false);
+    /// let board = Board::new();
     /// ```
-    pub fn new(track_move_history: bool) -> Self {
+    pub fn new() -> Self {
         Board {
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,
-            move_history: if track_move_history {
-                Some(MoveHistory::new())
-            } else {
-                None
-            },
         }
     }
 
-    /// Resets and zeroes the state of `Board::default` Board was initialised.
+    /// Resets and zeroes the state of Board as if it was just initialised.
     ///
     /// # Example
     /// ```
@@ -109,14 +86,6 @@ impl Board {
         self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
         self.main_board = [0; 9];
         self.xo_miniboard_win_count = 0;
-        if let Some(move_history) = &mut self.move_history {
-            move_history.reset();
-        }
-    }
-
-    // TODO: clone_with_history method for AI vs player
-    pub fn _clone_with_history(&self) -> Self {
-        todo!()
     }
 
     /////* Cell Operations */////
@@ -287,25 +256,6 @@ impl Board {
         debug_assert_ne!(player, 0, "'player' was 0! must be 1 or 2");
         let miniboard = Self::move_miniboard(row, column);
 
-        // take a snapshot of the relevant board state before the move
-        // so, when we undo to roll back the change
-        // we surgically alter the row of the move, and the miniboard affected which may be
-        // on a different row, with the previous values
-        if self.move_history.is_some() {
-            let mb_move_count =
-                (self.main_board[miniboard as usize] >> flag::MINIBOARD_MOVE_COUNT_X) as u16;
-            let mb_status = self.get_status_of(miniboard);
-
-            self.move_history.as_mut().unwrap().add(
-                (row, column),
-                self.last_move,
-                miniboard,
-                mb_status,
-                mb_move_count,
-                self.xo_miniboard_win_count,
-            )
-        }
-
         self.set_cell(row, column, player);
         self.last_move = (row, column);
 
@@ -317,35 +267,6 @@ impl Board {
         _ = self.calculate_miniboard_status(miniboard);
     }
 
-    // TODO move to impl board in move_history?
-    pub fn undo_move(&mut self) {
-        if let Some((
-            (row, column),
-            (last_row, last_col),
-            miniboard,
-            mb_status,
-            mb_move_count,
-            win_count,
-        )) = self.move_history.as_mut().unwrap().pop()
-        {
-            self.set_cell(row, column, 0);
-            self.last_move = (last_row, last_col);
-            self.set_status_of(miniboard, mb_status);
-            self.xo_miniboard_win_count = win_count;
-
-            // clear
-            let offset = 20;
-            let mask = (1 << 12) - 1; // 0b1111_1111_1111;
-            let mut move_count = self.main_board[miniboard as usize];
-            move_count &= !(mask << offset);
-
-            //set
-            move_count |= (mb_move_count as u32) << 20;
-
-            self.main_board[miniboard as usize] = move_count;
-            //println!("in undo after {:012b}", move_count);
-        }
-    }
 
     /// Returns the `miniboard` that `move` is in.
     /// # Example
@@ -455,33 +376,9 @@ impl Default for Board {
             main_board: [0; 9],
             last_move: (flag::NEW_GAME, flag::NEW_GAME),
             xo_miniboard_win_count: 0,
-            move_history: None,
         }
     }
 }
-
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum BoardParseError {
-    RowCountInsufficient,
-    ExcessiveArguments,
-    RowNotU32,
-    MissingLastMoveRow,
-    MissingLastMoveCol,
-    LastMoveRowNotU8,
-    LastMoveColNotU8,
-    MbWinCountParseError(std::num::ParseIntError),
-    MissingMbWincount,
-    InvalidMoveCoordinates,
-    InvalidMbWinCount,
-}
-
-impl std::fmt::Display for BoardParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
 
 impl From<Board> for String {
     fn from(board: Board) -> Self {
@@ -495,83 +392,6 @@ impl From<Board> for String {
         board_str.push_str(&format!("{}", board.xo_miniboard_win_count));
 
         board_str
-    }
-}
-
-// TODO: Ensure each number is within the valid range e.g. lastmove < (9, 9), mbwincount <= 7 
-impl TryFrom<&str> for Board {
-    type Error = BoardParseError;
-
-    /// Format: `[row 0–8]:lastmove_row:lastmove_col:xo_miniboard_wincount`
-    /// Excludes move_history
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        use BoardParseError::*;
-        let mut split = value.split(':');
-
-        // Main board
-        let mut main_board: [u32; 9] = [0; 9];
-
-        for row in &mut main_board {
-            *row = split
-                .next()
-                .ok_or(RowCountInsufficient)?
-                .parse()
-                .map_err(|_| RowNotU32)?;
-        }
-
-        // last move row col
-        let last_move = (
-            split
-                .next()
-                .ok_or(MissingLastMoveRow)?
-                .parse::<u8>()
-                .map_err(|_| LastMoveRowNotU8)?,
-            split
-                .next()
-                .ok_or(MissingLastMoveCol)?
-                .parse::<u8>()
-                .map_err(|_| LastMoveColNotU8)?
-        );
-
-        let (0..=8, 0..=8) = last_move else {
-            return Err(InvalidMoveCoordinates);
-        };
-
-        // xo miniboard wincount
-        let xo_miniboard_win_count = split
-            .next()
-            .ok_or(MissingMbWincount)?
-            .parse::<u8>()
-            .map_err(MbWinCountParseError)?;
-
-        // validate
-        let xo_mbw = xo_miniboard_win_count;
-        const PLAYER_X_FLAG: u8 = (flag::X_PLAYER - 1) * 3;
-        const PLAYER_O_FLAG: u8 = (flag::O_PLAYER - 1) * 3;
-        let playerx_mbw = (xo_mbw & (0b111 << PLAYER_X_FLAG)) >> PLAYER_X_FLAG;
-        let playero_mbw = (xo_mbw & (0b111 << PLAYER_O_FLAG)) >> PLAYER_O_FLAG;
-
-        let (0..=7, 0..=7, 0..=9, true) = (
-            playerx_mbw,
-            playero_mbw,
-            playero_mbw + playero_mbw,
-            xo_mbw < 0b00_111_111,
-        ) else {
-            return Err(InvalidMbWinCount);
-        };
-
-        if split.next().is_some() {
-            return Err(ExcessiveArguments);
-        }
-
-        let board = Board {
-            main_board,
-            last_move,
-            xo_miniboard_win_count,
-            move_history: None,
-        };
-
-        Ok(board)
     }
 }
 

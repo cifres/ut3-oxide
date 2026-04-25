@@ -2,24 +2,23 @@ mod ai;
 mod board;
 
 use ai::AI;
-use board::{Board, flag};
+use board::{Board, flag, move_tracker::TrackedBoard};
 use std::io::{self, Write};
 
 fn main() -> Result<(), std::io::Error> {
-    let mut board = Board::new(true);
-
     let mut args = std::env::args();
     _ = args.next(); // program name
     if args.len() == 0 {
-        player_vs_ai(&mut board);
+        player_vs_ai();
     } else {
-        ai_vs_ai(board, &mut args);
+        ai_vs_ai(&mut args);
     }
 
     Ok(())
 }
 
-fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
+fn ai_vs_ai(args: &mut std::env::Args) {
+    let mut board = Board::new();
     let depth_1: u8 = args
         .next()
         .expect("should've gotten arg for AI X")
@@ -111,17 +110,18 @@ fn ai_vs_ai(mut board: Board, args: &mut std::env::Args) {
     );
 }
 
-fn player_vs_ai(board: &mut Board) {
+fn player_vs_ai() {
     let ai_x = AI::new(flag::X_PLAYER);
+    let mut tracked = TrackedBoard::new(Board::new());
 
-    println!("{board:#}");
+    println!("{:#}", tracked.board);
 
     loop {
-        let Some((row, column)) = ask_move(board) else {
+        let Some((row, column)) = ask_move(&mut tracked) else {
             print!("\x1B[2J\x1B[1;1H");
-            println!("{board:#}");
+            println!("{:#}", tracked.board);
             println!("invalid!");
-            let (lr, lc) = board.last_move;
+            let (lr, lc) = tracked.board.last_move;
             println!(
                 "{lr} {lc} move in -> {}",
                 Board::move_corresponding_miniboard(lr, lc)
@@ -129,31 +129,31 @@ fn player_vs_ai(board: &mut Board) {
             continue;
         };
 
-        if !board.is_valid_move(row, column) {
+        if !tracked.board.is_valid_move(row, column) {
             print!("\x1B[2J\x1B[1;1H");
-            println!("{board:#}");
+            println!("{:#}", tracked.board);
             println!("invalid!");
             continue;
         }
 
-        board.do_move(row, column, 1);
-        let game_status = board.calculate_game_status();
+        tracked.do_move(row, column, 1);
+        let game_status = tracked.board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
             _ = io::stdout().flush();
             println!("Game over: result {game_status}");
-            board.display_mb_statuses();
+            tracked.board.display_mb_statuses();
             break;
         }
 
         // println!("{board:#}");
         // ai move
         let now = std::time::Instant::now();
-        let (eval, (row, column)) = ai_x.calculate_move_par(board, 5);
+        let (eval, (row, column)) = ai_x.calculate_move_par(&tracked.board, 5);
         let elapsed = now.elapsed();
-        board.do_move(row, column, 2);
+        tracked.do_move(row, column, 2);
 
         print!("\x1B[2J\x1B[1;1H");
-        println!("{board:#}");
+        println!("{:#}", tracked.board);
         println!(
             "{row} {column} move in -> {} ({} ms | {} μs)",
             Board::move_corresponding_miniboard(row, column),
@@ -166,17 +166,17 @@ fn player_vs_ai(board: &mut Board) {
         println!("score: {eval} -> {:.2}", norm);
         eval_bar(norm, 30);
 
-        let game_status = board.calculate_game_status();
+        let game_status = tracked.board.calculate_game_status();
         if game_status != flag::STATUS_CONTESTABLE {
             _ = io::stdout().flush();
             println!("Game over: result {game_status}");
-            board.display_mb_statuses();
+            tracked.board.display_mb_statuses();
             break;
         }
     }
 }
 
-fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
+fn ask_move(tracked: &mut TrackedBoard) -> Option<(u8, u8)> {
     print!("Enter a move as \"rowcol\" like \"43\": ");
     let _ = io::stdout().flush();
 
@@ -189,12 +189,12 @@ fn ask_move(board: &mut Board) -> Option<(u8, u8)> {
     if input == "u" {
         println!("Move undone!");
         // undo twice for the AI and the player
-        board.undo_move();
-        board.undo_move();
+        tracked.undo_move();
+        tracked.undo_move();
         return None;
     } else if input == "r" {
         println!("Game reset!");
-        board.reset();
+        tracked.reset();
         return None;
     } else if input == "q" {
         println!("See ya! :)");

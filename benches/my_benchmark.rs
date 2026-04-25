@@ -12,7 +12,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("AI-performance");
 
     // single call speed
-    let mut board = Board::new(true);
+    let mut board = Board::new();
     //let mut board = Board::default();
     let ai = AI::default();
     let rng = rand::prelude::SmallRng::seed_from_u64(7);
@@ -169,7 +169,7 @@ fn ai_vs_ai(mut board: Board, aix: &AI, aio: &AI) -> (u8, u8) {
 }
 
 fn ai_playout(seed: Option<u64>) -> (u8, u8, u16) {
-    let mut board = Board::new(true);
+    let mut board = Board::new();
     let ai = AI::default();
     let mut turns = 0;
     let possible_moves = 0;
