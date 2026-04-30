@@ -3,22 +3,13 @@ mod iterator;
 pub mod move_tracker;
 pub mod rules;
 
-// TODO: move miniboard, move_corresponding_miniboard, miniboard_starting_coord lookup tables
-// miniboard 1d -> miniboard 2d:     mb // 3, mb % 3
-// miniboard -> starting_coord:      mb // 3 * 3, mb % 3 * 3
-// move -> miniboard:                row // 3 * 3 + column
-// move -> corresponding mb:        (column % 3) + (row % 3) * 3
-// miniboard -> corresponding cells:
-// mb 1, 2 (5) <- row * 3, col
-//  (1, 2) (1, 5) (1, 8)
-//  (4, 2) (4, 5) (4, 8)
-//  (7, 2) (7, 5) (7, 8)
-// mb -> (mb // 3) + (row * 3), (mb % 3) + col * 3
-
-#[allow(dead_code)]
+// #[allow(dead_code)]
 pub mod flag {
-    pub const MINIBOARD_STATUS                 : u8 = 18;
-    pub(crate) const STATUS_BIT_SIZE           : u8 = 0b11;
+    pub(crate) const CELL_LEN                  : u8 = 2; 
+    pub(crate) const CELL_MASK                 : u32 = (1 << CELL_LEN) - 1;
+
+    pub const MINIBOARD_STATUS_POS             : u8 = 18;
+    pub(crate) const STATUS_LEN                : u8 = 0b11;
     pub const STATUS_CONTESTABLE               : u8 = 0;
     pub const STATUS_X_WIN                     : u8 = 1;
     pub const STATUS_O_WIN                     : u8 = 2;
@@ -29,13 +20,13 @@ pub mod flag {
     pub(crate) const MINIBOARD_MOVE_COUNT_TOTAL: u8 = 28;
     pub(crate) const MOVE_COUNT_BIT_SIZE       : u8 = 0b1111;
 
-    // value that's > 9 but is (NEW_GAME + NEW_GAME * 9) < u8::MAX --  NOTE: not stable yet
     pub const NEW_GAME                         : u8 = 0;
 
     pub const EMPTY                            : u8 = 0;
     pub const X_PLAYER                         : u8 = 1;
     pub const O_PLAYER                         : u8 = 2;
 }
+use flag::*;
 
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
@@ -95,9 +86,8 @@ impl Board {
         assert!(row < 9);
         assert!(column < 9);
         let offset = column * 2;
-        //let mask = 0b11 << offset;
 
-        ((self.main_board[row as usize] >> offset) & 0b11) as u8
+        ((self.main_board[row as usize] >> offset) & CELL_MASK) as u8
     }
 
     #[inline]
@@ -107,7 +97,7 @@ impl Board {
 
         // clear bits
         let offset = column * 2;
-        self.main_board[row as usize] &= !((0b11 << offset) as u32);
+        self.main_board[row as usize] &= !(CELL_MASK << offset);
 
         // set bits
         self.main_board[row as usize] |= (value as u32) << offset;
@@ -116,10 +106,10 @@ impl Board {
     /////* Miniboard Meta Data */////
 
     #[inline(always)]
-    fn get_meta_data(&self, miniboard: u8, flag_pos: u8, flag_size: u8) -> u8 {
+    fn get_meta_data(&self, miniboard: u8, flag_pos: u8, flag_len: u8) -> u8 {
         assert!(miniboard < 9);
 
-        let mask = (flag_size as u32) << flag_pos;
+        let mask = (flag_len as u32) << flag_pos;
         ((self.main_board[miniboard as usize] & mask) >> flag_pos) as u8
     }
 
@@ -139,7 +129,7 @@ impl Board {
     // NOTE: hot function
     #[inline(always)]
     pub fn get_status_of(&self, miniboard: u8) -> u8 {
-        self.get_meta_data(miniboard, flag::MINIBOARD_STATUS, flag::STATUS_BIT_SIZE)
+        self.get_meta_data(miniboard, flag::MINIBOARD_STATUS_POS, flag::STATUS_LEN)
     }
 
     /// Sets the status of a `miniboard`.
@@ -148,8 +138,8 @@ impl Board {
         assert!(value <= flag::STATUS_DRAW);
         self.set_meta_data(
             miniboard,
-            flag::MINIBOARD_STATUS,
-            flag::STATUS_BIT_SIZE,
+            flag::MINIBOARD_STATUS_POS,
+            flag::STATUS_LEN,
             value,
         );
     }
