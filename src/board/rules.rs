@@ -137,7 +137,13 @@ impl Board {
         } else {
             for row in 0..9 {
                 for column in 0..9 {
-                    let valid = self.is_valid_move(row, column);
+                    // We know the corresponding_mb is uncontestable/invalid
+                    // so, only check for the other two rules; contestable miniboard and empty cell
+                    // let valid = self.is_valid_move(row, column);
+                    let valid = self.get_status_of(Self::move_miniboard(row, column))
+                        == flag::STATUS_CONTESTABLE
+                        && self.get_cell(row, column) == flag::EMPTY;
+
                     let offset = column + row * 9;
                     moves_validity_bitfield |= (valid as u128) << offset;
                 }
