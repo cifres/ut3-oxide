@@ -2,7 +2,7 @@ use rayon::iter::{ParallelBridge, ParallelIterator};
 
 use crate::board::{
     Board,
-    flag::{self, STATUS_CONTESTABLE},
+    bitflag::{self, STATUS_CONTESTABLE},
     rules::WINNING_LINES,
 };
 
@@ -56,7 +56,7 @@ pub struct AI {
 
 impl Default for AI {
     fn default() -> Self {
-        Self::new(flag::O_PLAYER)
+        Self::new(bitflag::O_PLAYER)
     }
 }
 
@@ -65,16 +65,16 @@ impl AI {
     /// representing `1` or `2`.
     /// # Example
     /// ```
-    /// use ut3_oxide::{board::flag, ai::AI};
-    /// let ai_x = AI::new(flag::X_PLAYER);
-    /// let ai_o = AI::new(flag::O_PLAYER);
+    /// use ut3_oxide::{board::bitflag, ai::AI};
+    /// let ai_x = AI::new(bitflag::X_PLAYER);
+    /// let ai_o = AI::new(bitflag::O_PLAYER);
     /// ```
     pub fn new(ai_shape: u8) -> Self {
         //println!("Ai created as {ai_shape}");
-        let opponent_shape = if ai_shape == flag::O_PLAYER {
-            flag::X_PLAYER
+        let opponent_shape = if ai_shape == bitflag::O_PLAYER {
+            bitflag::X_PLAYER
         } else {
-            flag::O_PLAYER
+            bitflag::O_PLAYER
         };
         Self {
             ai_shape,
@@ -131,7 +131,7 @@ impl AI {
         mut beta: i16,
         is_max: bool,
     ) -> i16 {
-        if depth == 0 || board.calculate_game_status() != flag::STATUS_CONTESTABLE {
+        if depth == 0 || board.calculate_game_status() != bitflag::STATUS_CONTESTABLE {
             return self.evaluate(board);
         }
 
@@ -421,7 +421,7 @@ mod tests {
 
     #[test]
     pub(crate) fn ai_evaluate() {
-        let ai = AI::new(flag::O_PLAYER);
+        let ai = AI::new(bitflag::O_PLAYER);
         let mut board = Board::default();
         board.do_move(3, 0, 2);
 

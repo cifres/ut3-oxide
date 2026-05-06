@@ -36,7 +36,7 @@ impl TrackedBoard {
 
 #[cfg(test)]
 mod tests {
-    use super::super::{Board, flag};
+    use super::super::{Board, bitflag};
     use super::TrackedBoard;
 
     #[test]
@@ -88,7 +88,7 @@ mod tests {
 
         assert_eq!(tracked.board.get_player_move_count_of(2, 1), 3);
         assert_eq!(tracked.board.get_total_move_count_of(2), 3);
-        assert_eq!(tracked.board.calculate_game_status(), flag::STATUS_X_WIN);
+        assert_eq!(tracked.board.calculate_game_status(), bitflag::STATUS_X_WIN);
 
         let wincount_before = tracked.board.get_miniboard_win_count_of(1);
         //println!("{board}");
@@ -98,7 +98,7 @@ mod tests {
         //println!("{board}");
         assert_eq!(
             tracked.board.calculate_game_status(),
-            flag::STATUS_CONTESTABLE
+            bitflag::STATUS_CONTESTABLE
         );
         assert_eq!(
             tracked.board.get_miniboard_win_count_of(1),
@@ -146,12 +146,12 @@ mod tests {
         tracked.do_move(3, 6, 1);
         tracked.do_move(3, 7, 1);
         tracked.do_move(3, 8, 1);
-        assert_eq!(tracked.board.calculate_game_status(), flag::STATUS_X_WIN);
+        assert_eq!(tracked.board.calculate_game_status(), bitflag::STATUS_X_WIN);
 
         tracked.undo_move();
         assert_eq!(
             tracked.board.calculate_game_status(),
-            flag::STATUS_CONTESTABLE
+            bitflag::STATUS_CONTESTABLE
         );
 
         for _ in 0..8 {

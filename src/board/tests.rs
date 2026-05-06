@@ -1,5 +1,5 @@
 #[cfg(test)]
-use super::{Board, flag, iterator};
+use super::{Board, bitflag, iterator};
 
 #[test]
 fn statusesmb() {
@@ -80,8 +80,8 @@ fn is_valid_move_test() {
     let occuipied_cell = (0, 2);
 
     board.set_cell(occuipied_cell.0, occuipied_cell.1, 2);
-    board.set_status_of(uncontestable_corresponding_miniboard, flag::STATUS_X_WIN);
-    board.set_status_of(uncontestable_miniboard, flag::STATUS_X_WIN);
+    board.set_status_of(uncontestable_corresponding_miniboard, bitflag::STATUS_X_WIN);
+    board.set_status_of(uncontestable_miniboard, bitflag::STATUS_X_WIN);
 
     let validcells = board.valid_moves_bitfield();
     //println!("validmask = {validmask:b}");
@@ -125,7 +125,7 @@ fn is_valid_move_test() {
     let (_row, _column) = (1, 1);
     let move_corresponding = Board::move_corresponding_miniboard(_row, _column);
     board.do_move(_row, _column, 1);
-    board.set_status_of(move_corresponding, flag::STATUS_X_WIN);
+    board.set_status_of(move_corresponding, bitflag::STATUS_X_WIN);
 
     for row in 0..9 {
         for col in 0..9 {
@@ -173,7 +173,7 @@ fn check_miniboard_status() {
     /* row-wise horizontal line: 0 */
     board.do_move(0, 0, 2);
     assert!(!board.calculate_miniboard_status(0));
-    assert_eq!(board.get_status_of(0), flag::STATUS_CONTESTABLE);
+    assert_eq!(board.get_status_of(0), bitflag::STATUS_CONTESTABLE);
 
     board.do_move(0, 1, 2);
     board.do_move(0, 2, 2);
@@ -182,7 +182,7 @@ fn check_miniboard_status() {
     let win = board.calculate_miniboard_status(miniboard);
     let winner = board.get_status_of(miniboard);
     assert!(win);
-    assert_eq!(winner, flag::STATUS_O_WIN);
+    assert_eq!(winner, bitflag::STATUS_O_WIN);
     board.reset();
 
     // row: 1
@@ -194,7 +194,7 @@ fn check_miniboard_status() {
     let win = board.calculate_miniboard_status(miniboard);
     let winner = board.get_status_of(miniboard);
     assert!(win);
-    assert_eq!(winner, flag::STATUS_X_WIN);
+    assert_eq!(winner, bitflag::STATUS_X_WIN);
     board.reset();
 
     // row: 2
@@ -207,7 +207,7 @@ fn check_miniboard_status() {
     let win = board.calculate_miniboard_status(miniboard);
     let winner = board.get_status_of(miniboard);
     assert!(win);
-    assert_eq!(winner, flag::STATUS_X_WIN);
+    assert_eq!(winner, bitflag::STATUS_X_WIN);
 
     // o win
     board.do_move(2, 3, 2);
@@ -218,7 +218,7 @@ fn check_miniboard_status() {
     let win = board.calculate_miniboard_status(miniboard);
     let winner = board.get_status_of(miniboard);
     assert!(win);
-    assert_eq!(winner, flag::STATUS_O_WIN);
+    assert_eq!(winner, bitflag::STATUS_O_WIN);
 
     board.reset();
 
@@ -241,7 +241,7 @@ fn check_miniboard_status() {
     let win = board.calculate_miniboard_status(miniboard);
     let winner = board.get_status_of(miniboard);
     assert!(win);
-    assert_eq!(winner, flag::STATUS_X_WIN);
+    assert_eq!(winner, bitflag::STATUS_X_WIN);
     board.reset();
 
     // column: 2
@@ -253,7 +253,7 @@ fn check_miniboard_status() {
     let win = board.calculate_miniboard_status(miniboard);
     let winner = board.get_status_of(miniboard);
     assert!(win);
-    assert_eq!(winner, flag::STATUS_O_WIN);
+    assert_eq!(winner, bitflag::STATUS_O_WIN);
     board.reset();
 
     // diagonal: 0
@@ -275,14 +275,14 @@ fn check_miniboard_status() {
     let status = board.get_status_of(miniboard);
     println!("movecount: {:?}", board.get_total_move_count_of(miniboard));
     assert!(status_changed);
-    assert_eq!(status, flag::STATUS_DRAW);
+    assert_eq!(status, bitflag::STATUS_DRAW);
 
     // 9 moves is a draw but ensure priority to win checking
     // by changing last 3 rows to make x win and have 9 moves made
     //board.set_player_move_count_of(miniboard, 3, 1);
     //board.set_player_move_count_of(miniboard, 3, 2);
     board.set_total_move_count_of(miniboard, 6);
-    board.set_status_of(miniboard, flag::STATUS_CONTESTABLE);
+    board.set_status_of(miniboard, bitflag::STATUS_CONTESTABLE);
     board.do_move(8, 6, 1);
     board.do_move(8, 7, 2);
     board.do_move(8, 8, 1);
@@ -292,7 +292,7 @@ fn check_miniboard_status() {
     let status = board.get_status_of(miniboard);
     assert_eq!(move_count, 9);
     assert!(status_changed);
-    assert_eq!(status, flag::STATUS_X_WIN);
+    assert_eq!(status, bitflag::STATUS_X_WIN);
     board.reset();
 
     /* diagonal line */
@@ -305,7 +305,7 @@ fn check_miniboard_status() {
     let win = board.calculate_miniboard_status(miniboard);
     let winner = board.get_status_of(miniboard);
     assert!(win);
-    assert_eq!(winner, flag::STATUS_X_WIN);
+    assert_eq!(winner, bitflag::STATUS_X_WIN);
     board.reset();
 
     /* combined test*/
@@ -322,7 +322,7 @@ fn check_miniboard_status() {
 
     board.do_move(5, 5, 1);
     assert!(board.calculate_miniboard_status(miniboard));
-    assert_eq!(board.get_status_of(miniboard), flag::STATUS_X_WIN);
+    assert_eq!(board.get_status_of(miniboard), bitflag::STATUS_X_WIN);
     board.reset();
 
     /* move count > 6 == win test */
@@ -338,8 +338,8 @@ fn check_miniboard_status() {
     board.do_move(1, 1, 2);
 
     board.do_move(0, 2, 1);
-    assert_eq!(board.get_player_move_count_of(0, flag::X_PLAYER), 7);
-    assert_eq!(board.get_status_of(0), flag::STATUS_X_WIN);
+    assert_eq!(board.get_player_move_count_of(0, bitflag::X_PLAYER), 7);
+    assert_eq!(board.get_status_of(0), bitflag::STATUS_X_WIN);
 
 }
 
@@ -352,7 +352,7 @@ fn get_game_status() {
     board.do_move(3, 1, 1);
     board.do_move(3, 2, 1);
     board.calculate_miniboard_status(3);
-    assert_eq!(board.calculate_game_status(), flag::STATUS_CONTESTABLE);
+    assert_eq!(board.calculate_game_status(), bitflag::STATUS_CONTESTABLE);
 
     board.do_move(3, 4, 1);
     board.do_move(4, 4, 1);
@@ -365,16 +365,16 @@ fn get_game_status() {
     board.calculate_miniboard_status(5);
 
     let gamestatus = board.calculate_game_status();
-    assert_eq!(gamestatus, flag::STATUS_X_WIN);
+    assert_eq!(gamestatus, bitflag::STATUS_X_WIN);
 
     board.do_move(5, 7, 2);
     let gamestatus = board.calculate_game_status();
-    assert_eq!(gamestatus, flag::STATUS_CONTESTABLE);
+    assert_eq!(gamestatus, bitflag::STATUS_CONTESTABLE);
 
     // o win
     // pretend x didn't form a line in the 5th miniboard and test
     board.set_cell(5, 8, 0);
-    board.set_status_of(5, flag::STATUS_CONTESTABLE);
+    board.set_status_of(5, bitflag::STATUS_CONTESTABLE);
 
     board.do_move(2, 6, 2);
     board.do_move(2, 7, 2);
@@ -392,7 +392,7 @@ fn get_game_status() {
     let gamestatus = board.calculate_game_status();
     let o_mbwincount = board.get_miniboard_win_count_of(2);
 
-    assert_eq!(gamestatus, flag::STATUS_O_WIN);
+    assert_eq!(gamestatus, bitflag::STATUS_O_WIN);
     assert_eq!(o_mbwincount, 3);
 
     // draw: every cell full, or every miniboard is uncontestable
@@ -402,44 +402,44 @@ fn get_game_status() {
     // all boards drawn
 
     for i in 0..9 {
-        board.set_status_of(i, flag::STATUS_DRAW);
+        board.set_status_of(i, bitflag::STATUS_DRAW);
     }
     // artificially move 4, 4 to trigger scanning every miniboard
     // because 4, 4 is in miniboard 4 which intersects all other miniboards
     board.do_move(4, 4, 2);
-    assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
+    assert_eq!(board.calculate_game_status(), bitflag::STATUS_DRAW);
 
     // all miniboards are uncontestable (won/drawn for X/O not in a winning line)
-    board.set_status_of(0, flag::STATUS_X_WIN);
-    board.set_status_of(1, flag::STATUS_O_WIN);
-    board.set_status_of(2, flag::STATUS_X_WIN);
+    board.set_status_of(0, bitflag::STATUS_X_WIN);
+    board.set_status_of(1, bitflag::STATUS_O_WIN);
+    board.set_status_of(2, bitflag::STATUS_X_WIN);
 
-    board.set_status_of(3, flag::STATUS_X_WIN);
-    board.set_status_of(4, flag::STATUS_O_WIN);
-    board.set_status_of(5, flag::STATUS_X_WIN);
+    board.set_status_of(3, bitflag::STATUS_X_WIN);
+    board.set_status_of(4, bitflag::STATUS_O_WIN);
+    board.set_status_of(5, bitflag::STATUS_X_WIN);
 
-    board.set_status_of(6, flag::STATUS_O_WIN);
-    board.set_status_of(7, flag::STATUS_DRAW);
-    board.set_status_of(8, flag::STATUS_O_WIN);
+    board.set_status_of(6, bitflag::STATUS_O_WIN);
+    board.set_status_of(7, bitflag::STATUS_DRAW);
+    board.set_status_of(8, bitflag::STATUS_O_WIN);
 
-    board.set_miniboard_win_count_of(flag::O_PLAYER, 4);
+    board.set_miniboard_win_count_of(bitflag::O_PLAYER, 4);
     board.do_move(4, 4, 2);
     assert!(board.calculate_miniboard_status(4));
-    assert_ne!(board.get_status_of(4), flag::STATUS_CONTESTABLE);
-    assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
+    assert_ne!(board.get_status_of(4), bitflag::STATUS_CONTESTABLE);
+    assert_eq!(board.calculate_game_status(), bitflag::STATUS_DRAW);
 
     // almost/fully drawn
     board.reset();
     for miniboard in 0..9 {
-        board.set_status_of(miniboard, flag::STATUS_DRAW);
+        board.set_status_of(miniboard, bitflag::STATUS_DRAW);
     }
     board.do_move(8, 8, 1);
-    assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
+    assert_eq!(board.calculate_game_status(), bitflag::STATUS_DRAW);
 
     // almost
-    board.set_status_of(8, flag::STATUS_X_WIN);
-    board.set_miniboard_win_count_of(flag::X_PLAYER, 1);
-    assert_eq!(board.calculate_game_status(), flag::STATUS_DRAW);
+    board.set_status_of(8, bitflag::STATUS_X_WIN);
+    board.set_miniboard_win_count_of(bitflag::X_PLAYER, 1);
+    assert_eq!(board.calculate_game_status(), bitflag::STATUS_DRAW);
 }
 
 #[test]

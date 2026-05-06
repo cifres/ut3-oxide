@@ -1,4 +1,4 @@
-use super::{Board, flag, iterator::ValidMoveIterator};
+use super::{Board, bitflag, iterator::ValidMoveIterator};
 
 const fn build_winning_lines() -> [[(u8, u8); 3]; 8] {
     const ROW_LINE: [(u8, u8); 9] = const {
@@ -74,9 +74,9 @@ impl Board {
         let miniboard = Self::move_miniboard(row, column);
         let corresponding_miniboard = Self::move_corresponding_miniboard(last_row, last_column);
 
-        let cell_is_empty = self.get_cell(row, column) == flag::EMPTY;
+        let cell_is_empty = self.get_cell(row, column) == bitflag::EMPTY;
 
-        if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
+        if self.get_status_of(miniboard) != bitflag::STATUS_CONTESTABLE {
             return false;
         }
 
@@ -84,7 +84,7 @@ impl Board {
         if miniboard != corresponding_miniboard {
             // and the corresponding miniboard is uncontestable, whereas the selected miniboard is
             // and the cell is empty, allow the exception
-            if self.get_status_of(corresponding_miniboard) != flag::STATUS_CONTESTABLE
+            if self.get_status_of(corresponding_miniboard) != bitflag::STATUS_CONTESTABLE
                 && cell_is_empty
             {
                 return true;
@@ -120,14 +120,14 @@ impl Board {
         let (last_row, last_column) = self.last_move;
         let corresponding_mb = Self::move_corresponding_miniboard(last_row, last_column);
 
-        if !self.is_first_move() && self.get_status_of(corresponding_mb) == flag::STATUS_CONTESTABLE
+        if !self.is_first_move() && self.get_status_of(corresponding_mb) == bitflag::STATUS_CONTESTABLE
         {
             let (starting_row, starting_column) =
                 (corresponding_mb / 3 * 3, corresponding_mb % 3 * 3);
             for row in starting_row..starting_row + 3 {
                 for column in starting_column..starting_column + 3 {
                     //let valid = self.is_valid_move(row, column);
-                    let valid = self.get_cell(row, column) == flag::EMPTY;
+                    let valid = self.get_cell(row, column) == bitflag::EMPTY;
                     let offset = column + row * 9;
                     moves_validity_bitfield |= (valid as u128) << offset;
                 }
@@ -141,8 +141,8 @@ impl Board {
                     // so, only check for the other two rules; contestable miniboard and empty cell
                     // let valid = self.is_valid_move(row, column);
                     let valid = self.get_status_of(Self::move_miniboard(row, column))
-                        == flag::STATUS_CONTESTABLE
-                        && self.get_cell(row, column) == flag::EMPTY;
+                        == bitflag::STATUS_CONTESTABLE
+                        && self.get_cell(row, column) == bitflag::EMPTY;
 
                     let offset = column + row * 9;
                     moves_validity_bitfield |= (valid as u128) << offset;
@@ -159,7 +159,7 @@ impl Board {
         let (last_row, last_column) = self.last_move;
         let last_cell = self.get_cell(last_row, last_column);
 
-        last_cell == flag::EMPTY
+        last_cell == bitflag::EMPTY
     }
 
     /// Returns an iterator yielding valid `moves` as `(row, column)`
@@ -185,13 +185,13 @@ impl Board {
         assert!(miniboard < 9);
 
         // Don't recheck/recalculate winning lines for an uncontestable (won/lost/drawn) miniboard
-        if self.get_status_of(miniboard) != flag::STATUS_CONTESTABLE {
+        if self.get_status_of(miniboard) != bitflag::STATUS_CONTESTABLE {
             //println!("nocalc cached {miniboard} as state {}", self.get_status_of(miniboard));
             return true;
         }
 
         let last_player = self.get_cell(self.last_move.0, self.last_move.1);
-        debug_assert_ne!(last_player, flag::EMPTY);
+        debug_assert_ne!(last_player, bitflag::EMPTY);
 
         // early exit miniboards that cannot be won/lost/drawn yet.
         // equivalent to get_total_move_count_of < 3 but more accurate because it's impossible to
@@ -199,7 +199,7 @@ impl Board {
         let player_move_count = self.get_player_move_count_of(miniboard, last_player);
         if player_move_count < 3 {
             //println!("nocalc cached {miniboard} as state {} -- movecount < 3 for {last_player}", self.get_status_of(miniboard));
-            debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
+            debug_assert_eq!(self.get_status_of(miniboard), bitflag::STATUS_CONTESTABLE);
             return false;
         }
 
@@ -237,10 +237,10 @@ impl Board {
 
             // Only X or O can win a miniboard which are represented by 1 and 2 respectively
             // with draw being 3
-            debug_assert!(status < flag::STATUS_DRAW);
+            debug_assert!(status < bitflag::STATUS_DRAW);
 
             // Short-circuit and return early if a winning line is matched
-            if status > flag::STATUS_CONTESTABLE {
+            if status > bitflag::STATUS_CONTESTABLE {
                 self.set_status_of(miniboard, status);
                 //println!("calc {miniboard} as {}", self.get_status_of(miniboard));
                 self.set_miniboard_win_count_of(
@@ -257,11 +257,11 @@ impl Board {
         let move_count = self.get_total_move_count_of(miniboard);
         if move_count == 9 {
             //println!("calcd with draw for {miniboard} as {}", self.get_status_of(miniboard));
-            self.set_status_of(miniboard, flag::STATUS_DRAW);
+            self.set_status_of(miniboard, bitflag::STATUS_DRAW);
             return true;
         }
 
-        debug_assert_eq!(self.get_status_of(miniboard), flag::STATUS_CONTESTABLE);
+        debug_assert_eq!(self.get_status_of(miniboard), bitflag::STATUS_CONTESTABLE);
 
         false
     }
@@ -297,8 +297,8 @@ impl Board {
 
         // maybe todo?: if we just won/drew one and we've won less than 3, and there are other
         // contestable miniboards, then it's still contestable
-        if mb_status == flag::STATUS_CONTESTABLE {
-            return flag::STATUS_CONTESTABLE;
+        if mb_status == bitflag::STATUS_CONTESTABLE {
+            return bitflag::STATUS_CONTESTABLE;
         }
 
         // cheap check because it's logically impossible to not win if you win 7 miniboards
@@ -335,12 +335,12 @@ impl Board {
         // also useful for ai
         for miniboard in 0..9 {
             let status = self.get_status_of(miniboard);
-            if status == flag::STATUS_CONTESTABLE {
-                return flag::STATUS_CONTESTABLE;
+            if status == bitflag::STATUS_CONTESTABLE {
+                return bitflag::STATUS_CONTESTABLE;
             }
         }
 
         // otherwise, it's drawn.
-        flag::STATUS_DRAW
+        bitflag::STATUS_DRAW
     }
 }
