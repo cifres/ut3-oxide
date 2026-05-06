@@ -2,7 +2,7 @@ mod ai;
 mod board;
 
 use ai::AI;
-use board::{Board, flag, move_tracker::TrackedBoard};
+use board::{Board, bitflag, move_tracker::TrackedBoard};
 use std::io::{self, Write};
 
 fn main() -> Result<(), std::io::Error> {
@@ -37,8 +37,8 @@ fn ai_vs_ai(args: &mut std::env::Args) {
         .parse()
         .expect("iterations should be a number between 0–65535");
 
-    let ai_x = AI::new(flag::X_PLAYER);
-    let ai_o = AI::new(flag::O_PLAYER);
+    let ai_x = AI::new(bitflag::X_PLAYER);
+    let ai_o = AI::new(bitflag::O_PLAYER);
 
     let mut wins = 0u16;
     let mut draws = 0u16;
@@ -52,10 +52,10 @@ fn ai_vs_ai(args: &mut std::env::Args) {
             let (_, (row, column)) = ai_x.calculate_move_par(&board, depth_1);
             //let elapsed = now.elapsed();
             //println!("x: {:.2}", elapsed.as_micros());
-            board.do_move(row, column, flag::X_PLAYER);
+            board.do_move(row, column, bitflag::X_PLAYER);
             total_turns += 1;
             let game_status = board.calculate_game_status();
-            if game_status != flag::STATUS_CONTESTABLE {
+            if game_status != bitflag::STATUS_CONTESTABLE {
                 status = game_status;
                 break;
             }
@@ -76,24 +76,24 @@ fn ai_vs_ai(args: &mut std::env::Args) {
             //);
 
             let game_status = board.calculate_game_status();
-            if game_status != flag::STATUS_CONTESTABLE {
+            if game_status != bitflag::STATUS_CONTESTABLE {
                 status = game_status;
                 break;
             }
         }
 
-        if status == flag::X_PLAYER {
+        if status == bitflag::X_PLAYER {
             wins += 1;
-        } else if status == flag::STATUS_DRAW {
+        } else if status == bitflag::STATUS_DRAW {
             draws += 1;
-        } else if status == flag::O_PLAYER {
+        } else if status == bitflag::O_PLAYER {
             losses += 1;
         }
 
         board.reset();
         //println!("{board:#}");
         //println!("Game over: result [{status}]");
-        //println!("X = {} — O = {}", flag::X_PLAYER, flag::O_PLAYER);
+        //println!("X = {} — O = {}", bitflag::X_PLAYER, bitflag::O_PLAYER);
     }
 
     let total = wins + losses + draws;
@@ -111,7 +111,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
 }
 
 fn player_vs_ai() {
-    let ai_x = AI::new(flag::X_PLAYER);
+    let ai_x = AI::new(bitflag::X_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
 
     println!("{:#}", tracked.board);
@@ -138,7 +138,7 @@ fn player_vs_ai() {
 
         tracked.do_move(row, column, 1);
         let game_status = tracked.board.calculate_game_status();
-        if game_status != flag::STATUS_CONTESTABLE {
+        if game_status != bitflag::STATUS_CONTESTABLE {
             _ = io::stdout().flush();
             println!("Game over: result {game_status}");
             tracked.board.display_mb_statuses();
@@ -167,7 +167,7 @@ fn player_vs_ai() {
         eval_bar(norm, 30);
 
         let game_status = tracked.board.calculate_game_status();
-        if game_status != flag::STATUS_CONTESTABLE {
+        if game_status != bitflag::STATUS_CONTESTABLE {
             _ = io::stdout().flush();
             println!("Game over: result {game_status}");
             tracked.board.display_mb_statuses();

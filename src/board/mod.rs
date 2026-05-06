@@ -3,37 +3,37 @@ mod iterator;
 pub mod move_tracker;
 pub mod rules;
 
-// #[allow(dead_code)]
-pub mod flag {
-    pub(crate) const CELL_LEN                      : u8 = 2;
-    pub(crate) const CELL_MASK                     : u32 = (1 << CELL_LEN) - 1;
+pub mod bitflag {
+    const _CELL_LEN                                : u8  = 2;
+    pub(crate) const CELL_MASK                     : u32 = 0b11;
 
-    // States for Cells
-    pub const EMPTY                                : u8 = 0;
-    pub const X_PLAYER                             : u8 = 1;
-    pub const O_PLAYER                             : u8 = 2;
+    // CELL states 
+    pub const EMPTY                                : u8  = 0;
+    pub const X_PLAYER                             : u8  = 1;
+    pub const O_PLAYER                             : u8  = 2;
 
-    pub const MINIBOARD_STATUS_POS                 : u8 = 18;
-    pub(crate) const MINIBOARD_STATUS_LEN          : u8 = 2;
-    pub(crate) const MINIBOARD_STATUS_MASK         : u8 = (1 << MINIBOARD_STATUS_LEN) - 1;
+    pub const MINIBOARD_STATUS_POS                 : u8  = 18;
+    const _MINIBOARD_STATUS_LEN                    : u8  = 2;
+    pub(crate) const MINIBOARD_STATUS_MASK         : u32 = 0b11;
 
-    // States for MINIBOARD_STATUS
-    pub const STATUS_CONTESTABLE                   : u8 = 0;
-    pub const STATUS_X_WIN                         : u8 = 1;
-    pub const STATUS_O_WIN                         : u8 = 2;
-    pub const STATUS_DRAW                          : u8 = 3;
+    // MINIBOARD_STATUS states — partially matches CELL states apart from STATUS_DRAW
+    pub const STATUS_CONTESTABLE                   : u8  = 0;
+    pub const STATUS_X_WIN                         : u8  = 1;
+    pub const STATUS_O_WIN                         : u8  = 2;
+    pub const STATUS_DRAW                          : u8  = 3;
 
-    pub(crate) const MINIBOARD_MOVE_COUNT_LEN      : u8 = 4;
-    pub(crate) const MINIBOARD_MOVE_COUNT_MASK     : u8 = (1 << MINIBOARD_MOVE_COUNT_LEN) - 1;
-    pub(crate) const MINIBOARD_MOVE_COUNT_X_POS    : u8 = 20;
-    pub(crate) const MINIBOARD_MOVE_COUNT_O_POS    : u8 = 24;
-    pub(crate) const MINIBOARD_MOVE_COUNT_TOTAL_POS: u8 = 28;
+    const _MINIBOARD_MOVE_COUNT_LEN                : u8  = 4;
+    pub(crate) const MINIBOARD_MOVE_COUNT_MASK     : u32 = 0b1111;
+    pub(crate) const MINIBOARD_MOVE_COUNT_X_POS    : u8  = 20;
+    pub(crate) const MINIBOARD_MOVE_COUNT_O_POS    : u8  = 24;
+    pub(crate) const MINIBOARD_MOVE_COUNT_TOTAL_POS: u8  = 28;
 
-    pub const MINIBOARD_WIN_COUNT_MASK             : u8 = 0b111;
 
-    pub const NEW_GAME                             : u8 = 0;
+    /// Not part of row metadata; uses `board.xo_miniboard_win_count`
+    pub const MINIBOARD_WIN_COUNT_MASK             : u8  = 0b111;
+
+    pub const NEW_GAME                             : u8  = 0;
 }
-use flag::*;
 
 /// `u32` board row format:
 /// most significant bit <- -> least significant bit
@@ -62,7 +62,7 @@ impl Board {
     pub fn new() -> Self {
         Board {
             main_board: [0; 9],
-            last_move: (flag::NEW_GAME, flag::NEW_GAME),
+            last_move: (bitflag::NEW_GAME, bitflag::NEW_GAME),
             xo_miniboard_win_count: 0,
         }
     }
@@ -81,7 +81,7 @@ impl Board {
     /// assert_eq!(board.get_cell(4, 4), 0);
     /// ```
     pub fn reset(&mut self) {
-        self.last_move = (flag::NEW_GAME, flag::NEW_GAME);
+        self.last_move = (bitflag::NEW_GAME, bitflag::NEW_GAME);
         self.main_board = [0; 9];
         self.xo_miniboard_win_count = 0;
     }
@@ -94,7 +94,7 @@ impl Board {
         assert!(column < 9);
         let offset = column * 2;
 
-        ((self.main_board[row as usize] >> offset) & flag::CELL_MASK) as u8
+        ((self.main_board[row as usize] >> offset) & bitflag::CELL_MASK) as u8
     }
 
     #[inline]
@@ -104,7 +104,7 @@ impl Board {
 
         // clear bits
         let offset = column * 2;
-        self.main_board[row as usize] &= !(flag::CELL_MASK << offset);
+        self.main_board[row as usize] &= !(bitflag::CELL_MASK << offset);
 
         // set bits
         self.main_board[row as usize] |= (value as u32) << offset;
@@ -113,59 +113,59 @@ impl Board {
     /////* Miniboard Meta Data */////
 
     #[inline(always)]
-    fn get_meta_data(&self, miniboard: u8, flag_pos: u8, flag_mask: u8) -> u8 {
+    fn get_meta_data(&self, miniboard: u8, bitflag_pos: u8, bitflag_mask: u32) -> u8 {
         assert!(miniboard < 9);
 
-        let mask = (flag_mask as u32) << flag_pos;
-        ((self.main_board[miniboard as usize] & mask) >> flag_pos) as u8
+        let mask = bitflag_mask << bitflag_pos;
+        ((self.main_board[miniboard as usize] & mask) >> bitflag_pos) as u8
     }
 
     #[inline(always)]
-    fn set_meta_data(&mut self, miniboard: u8, flag_pos: u8, flag_mask: u8, value: u8) {
+    fn set_meta_data(&mut self, miniboard: u8, bitflag_pos: u8, bitflag_mask: u32, value: u8) {
         // clear the occupying bits
         let miniboard = miniboard as usize;
-        let mask = (flag_mask as u32) << flag_pos;
+        let mask = bitflag_mask << bitflag_pos;
         self.main_board[miniboard] &= !mask;
 
         // set the cleared bits
-        let mask = (value as u32) << flag_pos;
+        let mask = (value as u32) << bitflag_pos;
         self.main_board[miniboard] |= mask;
     }
 
     /// Returns the status of a `miniboard`.
     #[inline(always)]
     pub fn get_status_of(&self, miniboard: u8) -> u8 {
-        self.get_meta_data(miniboard, flag::MINIBOARD_STATUS_POS, flag::MINIBOARD_STATUS_MASK)
+        self.get_meta_data(miniboard, bitflag::MINIBOARD_STATUS_POS, bitflag::MINIBOARD_STATUS_MASK)
     }
 
     /// Sets the status of a `miniboard`.
     #[inline(always)]
     pub fn set_status_of(&mut self, miniboard: u8, value: u8) {
-        assert!(value <= flag::STATUS_DRAW);
+        assert!(value <= bitflag::STATUS_DRAW);
         self.set_meta_data(
             miniboard,
-            flag::MINIBOARD_STATUS_POS,
-            flag::MINIBOARD_STATUS_MASK,
+            bitflag::MINIBOARD_STATUS_POS,
+            bitflag::MINIBOARD_STATUS_MASK,
             value,
         );
     }
 
     /// Returns the number of `miniboards` won by a `player`.
     pub fn get_miniboard_win_count_of(&self, player: u8) -> u8 {
-        assert!(player == flag::STATUS_X_WIN || player == flag::STATUS_O_WIN);
+        assert!(player == bitflag::STATUS_X_WIN || player == bitflag::STATUS_O_WIN);
         let offset = (player - 1) * 3;
-        let mask = flag::MINIBOARD_WIN_COUNT_MASK << offset;
+        let mask = bitflag::MINIBOARD_WIN_COUNT_MASK << offset;
        (self.xo_miniboard_win_count & mask) >> offset
     }
 
     /// Sets the number of `miniboards` won by a `player`.
     fn set_miniboard_win_count_of(&mut self, player: u8, value: u8) {
-        assert!(player == flag::STATUS_X_WIN || player == flag::STATUS_O_WIN);
+        assert!(player == bitflag::STATUS_X_WIN || player == bitflag::STATUS_O_WIN);
         assert!(value <= 7); // 7 is the max for 0b111, a the logical max in a ut3 game
         let offset = (player - 1) * 3;
 
         // clear bits
-        let mask = flag::MINIBOARD_WIN_COUNT_MASK << offset;
+        let mask = bitflag::MINIBOARD_WIN_COUNT_MASK << offset;
         let mut win_count = self.xo_miniboard_win_count & !mask;
 
         // set bits
@@ -190,27 +190,27 @@ impl Board {
     // NOTE: hot function
     //#[inline(always)]
     pub fn get_player_move_count_of(&self, miniboard: u8, player: u8) -> u8 {
-        let player_flag_pos = (player - 1) * 4 + flag::MINIBOARD_MOVE_COUNT_X_POS;
+        let player_flag_pos = (player - 1) * 4 + bitflag::MINIBOARD_MOVE_COUNT_X_POS;
         debug_assert!(
-            player_flag_pos == flag::MINIBOARD_MOVE_COUNT_X_POS
-                || player_flag_pos == flag::MINIBOARD_MOVE_COUNT_O_POS
+            player_flag_pos == bitflag::MINIBOARD_MOVE_COUNT_X_POS
+                || player_flag_pos == bitflag::MINIBOARD_MOVE_COUNT_O_POS
         );
-        self.get_meta_data(miniboard, player_flag_pos, flag::MINIBOARD_MOVE_COUNT_MASK)
+        self.get_meta_data(miniboard, player_flag_pos, bitflag::MINIBOARD_MOVE_COUNT_MASK)
     }
 
     /// Sets the number of `moves` a player has made in a `miniboard`.
     //#[inline(always)]
     fn set_player_move_count_of(&mut self, miniboard: u8, value: u8, player: u8) {
         // maps player `n` to bitflag pos for move count meta data of player `n`
-        let player_flag_pos = (player - 1) * 4 + flag::MINIBOARD_MOVE_COUNT_X_POS;
+        let player_flag_pos = (player - 1) * 4 + bitflag::MINIBOARD_MOVE_COUNT_X_POS;
         debug_assert!(
-            player_flag_pos == flag::MINIBOARD_MOVE_COUNT_X_POS
-                || player_flag_pos == flag::MINIBOARD_MOVE_COUNT_O_POS
+            player_flag_pos == bitflag::MINIBOARD_MOVE_COUNT_X_POS
+                || player_flag_pos == bitflag::MINIBOARD_MOVE_COUNT_O_POS
         );
         self.set_meta_data(
             miniboard,
             player_flag_pos,
-            flag::MINIBOARD_MOVE_COUNT_MASK,
+            bitflag::MINIBOARD_MOVE_COUNT_MASK,
             value,
         );
     }
@@ -218,13 +218,13 @@ impl Board {
     /// Returns the total number of `moves` both `players` have made in a `miniboard`.
     //#[inline(always)]
     pub fn get_total_move_count_of(&self, miniboard: u8) -> u8 {
-        //let x_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_X, flag::MOVE_COUNT_BIT_SIZE);
-        //let o_count = self.get_meta_data(miniboard, flag::MINIBOARD_MOVE_COUNT_O, flag::MOVE_COUNT_BIT_SIZE);
+        //let x_count = self.get_meta_data(miniboard, bitflag::MINIBOARD_MOVE_COUNT_X, bitflag::MOVE_COUNT_BIT_SIZE);
+        //let o_count = self.get_meta_data(miniboard, bitflag::MINIBOARD_MOVE_COUNT_O, bitflag::MOVE_COUNT_BIT_SIZE);
         //x_count + o_count
         self.get_meta_data(
             miniboard,
-            flag::MINIBOARD_MOVE_COUNT_TOTAL_POS,
-            flag::MINIBOARD_MOVE_COUNT_MASK,
+            bitflag::MINIBOARD_MOVE_COUNT_TOTAL_POS,
+            bitflag::MINIBOARD_MOVE_COUNT_MASK,
         )
     }
 
@@ -232,8 +232,8 @@ impl Board {
         // maps 1 => 22 and 2 => 26
         self.set_meta_data(
             miniboard,
-            flag::MINIBOARD_MOVE_COUNT_TOTAL_POS,
-            flag::MINIBOARD_MOVE_COUNT_MASK,
+            bitflag::MINIBOARD_MOVE_COUNT_TOTAL_POS,
+            bitflag::MINIBOARD_MOVE_COUNT_MASK,
             value,
         );
     }
@@ -373,7 +373,7 @@ impl Default for Board {
     fn default() -> Self {
         Self {
             main_board: [0; 9],
-            last_move: (flag::NEW_GAME, flag::NEW_GAME),
+            last_move: (bitflag::NEW_GAME, bitflag::NEW_GAME),
             xo_miniboard_win_count: 0,
         }
     }
