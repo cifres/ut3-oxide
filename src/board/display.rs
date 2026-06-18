@@ -27,23 +27,27 @@ impl fmt::Display for Board {
         // print the board with Xs and Os
         // (board:#)
         if f.alternate() {
-            writeln!(f, "┌───────┬───────┬───────┐")?;
+            writeln!(f)?;
+            writeln!(f, "    0 1 2   3 4 5   6 7 8  ")?;
+            writeln!(f, "  ┌───────┬───────┬───────┐")?;
             for row in 0..9 {
                 for column in 0..9 {
                     let cell = self.get_cell(row, column);
-                    if column == 0 {
-                        write!(f, "│ ")?
-                    }
                     let mvmbstatus = self.get_status_of(Self::move_miniboard(row, column));
 
+                    if column == 0 {
+                        write!(f, "{row} │ ")?;
+                    }
+
+                    // Backspace once and then start colouring
                     let repr = match (cell, mvmbstatus) {
                        (0, _) if self.is_valid_move(row, column) => "\x1b[32m─ \x1b[0m",
-                       (0, 1) => "\x1b[44m_ \x1b[0m",
-                       (0, 2) => "\x1b[41m_ \x1b[0m",
-                       (1, 1) => "\x1b[44mX \x1b[0m",
-                       (2, 2) => "\x1b[41mO \x1b[0m",
-                       (1, 2) => "\x1b[41mX \x1b[0m",
-                       (2, 1) => "\x1b[44mO \x1b[0m",
+                       (0, 1) => "\x08 \x08\x1b[44m _ \x1b[0m",
+                       (0, 2) => "\x08 \x08\x1b[41m _ \x1b[0m",
+                       (1, 1) => "\x08 \x08\x1b[44m X \x1b[0m",
+                       (1, 2) => "\x08 \x08\x1b[41m X \x1b[0m",
+                       (2, 1) => "\x08 \x08\x1b[44m O \x1b[0m",
+                       (2, 2) => "\x08 \x08\x1b[41m O \x1b[0m",
                        (0, _) => "─ ",
                        (1, _) => "\x1b[0;34mX \x1b[0m",
                        (2, _) => "\x1b[0;31mO \x1b[0m",
@@ -60,9 +64,9 @@ impl fmt::Display for Board {
 
                 if (row + 1) % 3 == 0 {
                     if row == 8 {
-                        writeln!(f, "└───────┴───────┴───────┘")?;
+                        writeln!(f, "  └───────┴───────┴───────┘")?;
                     } else {
-                        writeln!(f, "├───────┼───────┼───────┤")?;
+                        writeln!(f, "  ├───────┼───────┼───────┤")?;
                     }
                 }
             }
