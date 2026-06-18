@@ -6,31 +6,41 @@ use crate::board::{
     rules::WINNING_LINES,
 };
 
-// TODO: adjust weights
-
-// basic multiplier and weight adjustment for what is valued
-const SCORE_UNIT:                   i16 = 10;
-const MINIBOARD_WIN_COUNT:          i16 = 24; // increase?
-const CENTRE_MB_CONTROL:            i16 = 25;
-const CENTRE_CELL_CONTROL:          i16 =  1;
-const FREE_MOVE_CELL_SAME_MB:       i16 =  3;
-const UNCONTESTABLE_MB_POINTED_AT:  i16 =  3;
-const CONTINUOUS_MB_LINES:          i16 =  3;
-const BROKEN_MB_LINES:              i16 =  2;
-const CONTINUOUS_CELL_LINES:        i16 =  2;
-const BROKEN_CELL_LINES:            i16 =  1;
-// const N: u16 = 7 * 24 + 25 + 9 + 9 * 3 - (9 * 3) + (3 * 7) + (3 * 4) + (2 * 7) + (2 * 4);
+// Basic multiplier and weight adjustment for what is valued
+const SCORE_UNIT                 : i16 = 10;
+const MINIBOARD_WIN_COUNT        : i16 = 24; // increase?
+const CENTRE_MB_CONTROL          : i16 = 25;
+const CENTRE_CELL_CONTROL        : i16 = 1;
+const FREE_MOVE_CELL_SAME_MB     : i16 = 3;
+const UNCONTESTABLE_MB_POINTED_AT: i16 = 3;
+const CONTINUOUS_MB_LINES        : i16 = 3;
+const BROKEN_MB_LINES            : i16 = 2;
+const CONTINUOUS_CELL_LINES      : i16 = 2;
+const BROKEN_CELL_LINES          : i16 = 1;
 
 // NOTE: continuous lines count in both directions despite the overlap
 // whereas broken ones count once only.
-// TODO: rename continuous and broken lines?
 
 const DEPTH: u8 = 5;
 
-// Winning lines composed into continous and broken line patterns
-// Format is [continuous a continuous b, broken] where A and B intersect the e.g.
-// [(0, 0), (0, 1), (0, 2)] -> [(0, 0), (0, 1), (0, 1), (0, 2), ... // <-- continuous A and B
-// ... (1, 0), (0, 2)] <-- broken line pattern
+/// To heuristically evaluate positions that do not have an immediate winning line or miniboard, we
+/// reward moves that *almost* do. That is a line with two of the same shape of X or O. Like
+/// `X _ X`  or `O O _` where the former is a *broken* line and the latter is a *continuous* one.
+///
+/// Winning lines composed into continuous and broken line patterns
+/// Where a winning line is a group of xy coords in a triplet from [a, b, c] to continuous and
+/// broken like this: 
+///
+/// `Continuous` `[a, b, b, c]      `
+/// `Broken`     `[a, c]            `
+/// `Combined`   `[a, b, b, c, a, c]`
+///
+/// Then, we iterate over the line patterns in a window of two at a time, to evaluate each near
+/// winning line.
+/// `[(0, 0), (0, 1), (0, 2)]` ->
+/// `Continuous`: `[(0, 0), (0, 1), (0, 1), (0, 2)]`
+/// `Broken`    : `[(0, 0), (0, 2)]`
+/// `Combined`  : `[(0, 0), (0, 1), (0, 1), (0, 2), (0, 0), (0, 2)]`
 const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
     let mut i = 0;
     // continuous is a 3-in-a-row split up
@@ -61,7 +71,7 @@ impl Default for AI {
 }
 
 impl AI {
-    /// Creates a new [`AI`] with either `X` or `O` shape
+    /// Creates a new `AI` with either `X` or `O` shape
     /// representing `1` or `2`.
     /// # Example
     /// ```
@@ -70,7 +80,6 @@ impl AI {
     /// let ai_o = AI::new(bitflag::O_PLAYER);
     /// ```
     pub fn new(ai_shape: u8) -> Self {
-        //println!("Ai created as {ai_shape}");
         let opponent_shape = if ai_shape == bitflag::O_PLAYER {
             bitflag::X_PLAYER
         } else {
@@ -86,15 +95,16 @@ impl AI {
     /// # Example
     /// ```
     /// # use ut3_oxide::{board::Board, ai::AI};
-    /// let mut board = Board::default();
+    /// let mut board = Board::new();
     /// let aio = AI::default();
     /// let (eval, ((row, column))) = aio.calculate_move_par(&board, 5);
     /// board.do_move(row, column, 2);  // 2 represents O
     /// ```
-    pub fn calculate_move_par(&self, board: &Board, depth: u8) -> (i16, (u8, u8)) {
+    pub fn calculate_move_par(self, board: &Board, depth: u8) -> (i16, (u8, u8)) {
         let depth = if depth > 0 { depth } else { DEPTH };
 
-        let bstmv = board.valid_moves()
+        let bstmv = board
+            .valid_moves()
             .par_bridge()
             .map(|(row, column)| {
                 let mut board = board.clone();
@@ -116,7 +126,7 @@ impl AI {
     /// # use ut3_oxide::{board::Board, ai::AI};
     /// # let depth = 1;
     /// // initial call example
-    /// let mut board = Board::default();
+    /// let mut board = Board::new();
     /// let aio = AI::default();
     /// // for move in moves...
     /// // let mut board = board.clone();
@@ -124,7 +134,7 @@ impl AI {
     /// // let score = self.alphabeta_mm(&mut board, depth - 1, i16::MIN, i16::MAX, false);
     /// ```
     fn alphabeta_mm(
-        &self,
+        self,
         board: &mut Board,
         depth: u8,
         mut alpha: i16,
@@ -138,7 +148,7 @@ impl AI {
         if is_max {
             let mut score = i16::MIN;
             for (row, column) in board.valid_moves() {
-                let mut board = board.clone();      //NOTE: hot
+                let mut board = board.clone(); //NOTE: hot
                 board.do_move(row, column, self.ai_shape);
                 score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
                 //score = score.max(self.alphabeta_mm(board, depth - 1, alpha, beta, false));
@@ -182,13 +192,11 @@ impl AI {
     /// # Example
     /// ```
     /// # use ut3_oxide::{board::Board, ai::AI};
-    /// let mut board = Board::default();
+    /// let mut board = Board::new();
     /// let aio = AI::default();
     /// let eval = aio.evaluate(&board);
     /// ```
-    //#[unsafe(no_mangle)]
     pub fn evaluate(&self, board: &Board) -> i16 {
-
         let game_status = board.calculate_game_status();
         if game_status == self.opponent_shape {
             return i16::MIN;
@@ -217,7 +225,7 @@ impl AI {
 
         // println!("@ centre mb {score}");
 
-        // Produces repeating 0b001100 across the 18-bit range 
+        // Produces repeating 0b001100 across the 18-bit range
         const REP_UNIT: u32 = ((1 << 18) - 1) / 0b111111;
         let ai_centre_cell_mask = REP_UNIT * ((self.ai_shape as u32) << 2);
         let opp_centre_cell_mask = REP_UNIT * ((self.opponent_shape as u32) << 2);
@@ -234,28 +242,24 @@ impl AI {
 
         /////* Pointing to uncontestable miniboards */////
 
-        // Reverse it: get uncontestable MBs then directly check would-be corresponding cells
-        // miniboard 4 (1, 1) -> (1, 1), (1, 4), (1, 7)
+        // Get uncontestable MBs then directly check would-be corresponding cells
+        // i.e. miniboard 4 (1, 1) -> (1, 1), (1, 4), (1, 7)
         let cells_pointing_to_uncontestable_mbs = (0..9).filter_map(|mb| {
             if board.get_status_of(mb) == STATUS_CONTESTABLE {
                 return None;
             }
 
             let mut cells: Vec<u8> = Vec::with_capacity(9);
-            //let mut cells_int = 0u32;
             let (mb_row, mb_col) = ((mb / 3), (mb % 3));
             // row 1 col 1 | 4 | 7 ...
             for row in 0..3 {
                 for col in 0..3 {
                     let cell_state = board.get_cell(mb_row + row * 3, mb_col + col * 3);
                     cells.push(cell_state);
-                    //let offset = ((col) + (row * 3)) * 2;
-                    //cells_int |= (cell_state as u32) << offset;
                 }
             }
 
             Some(cells)
-            //Some(cells_int)
         });
 
         for uncontestable_mb in cells_pointing_to_uncontestable_mbs {
@@ -269,25 +273,10 @@ impl AI {
             }
         }
         // println!("@ uncontestable correspondence {score}");
-
-        //for pointing_cell in cells_pointing_to_uncontestable_mbs {
-        //    for i in 0..9 {
-        //    // extract cells one by one
-        //    let offset = i * 2;
-        //    let cell = ((pointing_cell & (0b11 << offset)) >> offset) as u8;
-        //    let ai_pointing = cell == self.ai_shape;
-        //    let opp_pointing = cell == self.opponent_shape;
         //
-        //    score += (opp_pointing as i16 - ai_pointing as i16)
-        //        * SCORE_UNIT
-        //        * UNCONTESTABLE_MB_POINTING;
-        //    }
-        //}
-
         /////* Near-won cell miniboard patterns */////
 
         // for every active miniboard, get its cells and check for near won patterns
-        // NOTE: hot: this loop
         let active_miniboard_cells = (0..9).filter_map(|miniboard| {
             if board.get_player_move_count_of(miniboard, self.ai_shape) >= 2
                 || board.get_player_move_count_of(miniboard, self.opponent_shape) >= 2
@@ -322,8 +311,7 @@ impl AI {
                 let opp_continous = ((pattern_opp & 0b1111 == pattern & 0b1111) as i16)
                     + ((pattern_opp & (0b1111 << 4) == pattern & (0b1111 << 4)) as i16);
 
-                let ai_broken =
-                    ((pattern_ai & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
+                let ai_broken = ((pattern_ai & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
                 let opp_broken =
                     ((pattern_opp & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
 
@@ -343,12 +331,14 @@ impl AI {
 
         /////* Near-won miniboard patterns */////
 
+        // Strong: unobstructed near-winning line like X X _ or O _ O
+        // Weak: obstructed near-winning line like X X O or O X O
         // continuous pattern strong for 2:  normal winning line: 10 10 10 -> 10 10 [00] OR [00] 10 10
         // continuous pattern weak for 2:  normal winning line: 10 10 10 -> 10 10 [01] OR [01] 10 10
         // unconnected pattern strong for 2:  normal winning line: 10 10 10 -> 10 [00] 10
         // unconnected pattern weak for 2:  normal winning line: 10 10 10 -> 10 [01] 10
         // e.g. winning line [(0, 0), (1, 0), (2, 0)] -> [(0, 0), (1, 0), (1, 0), (2, 0)]
-        // 2 wins at this offeset: 1010_1000 & 0b1111 << 4 -> 1010_0000 == 1010_0000 <- 1010_1010 & 0b1111 << 4
+        // 2 wins at this offset: 1010_1000 & 0b1111 << 4 -> 1010_0000 == 1010_0000 <- 1010_1010 & 0b1111 << 4
         // no one wins at this offset: 1010_0100 & 0b1111 -> 0000_0100 != 0000_1010 <- 1010_1010 & 0b1111
 
         let mbss = board.get_miniboard_statuses();
@@ -358,7 +348,6 @@ impl AI {
             let mut pattern_opp = 0u16;
             for (i, (row, column)) in line.iter().enumerate() {
                 let miniboard = column + row * 3;
-                //let status = (mbss & (0b11 << (miniboard * 2))) >> (miniboard * 2);
                 let status = (mbss >> (miniboard * 2)) & 0b11;
 
                 let normalised_offset = i * 2;
@@ -374,8 +363,7 @@ impl AI {
                 + ((pattern_opp & (0b1111 << 4) == pattern & (0b1111 << 4)) as i16);
 
             let ai_broken = ((pattern_ai & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
-            let opp_broken =
-                ((pattern_opp & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
+            let opp_broken = ((pattern_opp & (0b1111 << 8)) == (pattern & (0b1111 << 8))) as i16;
 
             score += ((ai_continous - opp_continous) * SCORE_UNIT * CONTINUOUS_MB_LINES)
                 + ((ai_broken - opp_broken) * SCORE_UNIT * BROKEN_MB_LINES);
@@ -422,7 +410,7 @@ mod tests {
     #[test]
     pub(crate) fn ai_evaluate() {
         let ai = AI::new(bitflag::O_PLAYER);
-        let mut board = Board::default();
+        let mut board = Board::new();
         board.do_move(3, 0, 2);
 
         let score = ai.evaluate(&board);
@@ -479,11 +467,12 @@ mod tests {
         board.do_move(3, 2, 1);
 
         let score = ai.evaluate(&board);
-        assert_eq!(score,
+        assert_eq!(
+            score,
             SCORE_UNIT * MINIBOARD_WIN_COUNT // 2 - 1
                 + SCORE_UNIT * CONTINUOUS_MB_LINES
                 + SCORE_UNIT * CONTINUOUS_CELL_LINES * (4 - 2)
-                + SCORE_UNIT * BROKEN_CELL_LINES,   // 2 - 1
+                + SCORE_UNIT * BROKEN_CELL_LINES, // 2 - 1
         );
 
         board.reset();
@@ -500,7 +489,10 @@ mod tests {
         board.display_mb_statuses();
 
         let score = ai.evaluate(&board);
-        assert_eq!(score, SCORE_UNIT * CONTINUOUS_MB_LINES * 2 + SCORE_UNIT * BROKEN_MB_LINES * 2);
+        assert_eq!(
+            score,
+            SCORE_UNIT * CONTINUOUS_MB_LINES * 2 + SCORE_UNIT * BROKEN_MB_LINES * 2
+        );
 
         board.reset();
         board.do_move(1, 0, 2);

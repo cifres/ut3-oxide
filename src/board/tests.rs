@@ -1,4 +1,3 @@
-#[cfg(test)]
 use super::{Board, bitflag, iterator};
 
 #[test]

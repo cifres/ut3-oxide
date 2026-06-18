@@ -1,5 +1,7 @@
 use super::Board;
 
+const AVG_MOV_CNT: usize = 54;
+
 pub struct TrackedBoard {
     pub board: Board,
     history: Vec<Board>,
@@ -9,7 +11,7 @@ impl TrackedBoard {
     pub fn new(board: Board) -> Self {
         TrackedBoard {
             board,
-            history: Vec::with_capacity(54), // Approx avg max moves per game
+            history: Vec::with_capacity(AVG_MOV_CNT),
         }
     }
 
@@ -31,6 +33,15 @@ impl TrackedBoard {
     pub fn reset(&mut self) {
         self.board.reset();
         self.history.clear();
+    }
+}
+
+impl Default for TrackedBoard {
+    fn default() -> Self {
+        Self {
+            board: Board::new(),
+            history: Vec::with_capacity(54),
+        }
     }
 }
 

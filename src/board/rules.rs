@@ -103,12 +103,21 @@ impl Board {
 
     /// Generates a bitfield from the valid moves on the miniboards
     /// `1` == valid and `0` == invalid
+    /// least sf bit == 0, 0
+    /// Key -- mb: miniboard, r: row, c: column
+    /// `                                                                                  mb0 r0 c0`
+    /// `                                                                                          v`
+    /// `0b000000000_000000000_000000000_000000000_000000000_000000000_000000000_000000000_000000000`
+    /// `                                                                                  ^`
+    /// `                                                                                  mb2 r0 c8`
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
+    /// # use ut3_oxide::board::bitflag;
     /// let mut board = Board::default();
     /// assert_eq!(board.valid_moves_bitfield(), (1 << 81) - 1);    // every move is valid
-    /// board.do_move(3, 3, 2);
+    ///
+    /// board.do_move(3, 3, bitflag::O_PLAYER);
     /// assert_eq!(board.valid_moves_bitfield(), 0b111000000111000000111);
     /// ```
     // TODO: order moves by importance?
