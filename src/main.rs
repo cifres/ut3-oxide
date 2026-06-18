@@ -1,4 +1,5 @@
-#[warn(clippy::pedantic)]
+#![warn(clippy::pedantic)]
+
 mod ai;
 mod board;
 
@@ -6,7 +7,7 @@ use ai::AI;
 use board::{Board, bitflag, move_tracker::TrackedBoard};
 use std::io::{self, Write};
 
-fn main() -> Result<(), std::io::Error> {
+fn main() {
     let mut args = std::env::args();
     _ = args.next(); // program name
     if args.len() == 0 {
@@ -14,29 +15,23 @@ fn main() -> Result<(), std::io::Error> {
     } else {
         ai_vs_ai(&mut args);
     }
-
-    Ok(())
 }
 
 fn ai_vs_ai(args: &mut std::env::Args) {
     let mut board = Board::new();
-    let depth_1: u8 = args
-        .next()
-        .expect("should've gotten arg for AI X")
-        .parse()
-        .expect("AI X's depth should be a valid number between 0–255");
 
-    let depth_2: u8 = args
-        .next()
-        .expect("should've gotten arg for AI O")
-        .parse()
-        .expect("AI O's depth should be a valid number between 0–255");
+    let args_len = args.len();
 
-    let iterations: u16 = args
-        .next()
-        .expect("should've gotten number of iterations")
-        .parse()
-        .expect("iterations should be a number between 0–65535");
+    let [depth_ai_x, depth_ai_o, iterations, ..]: [u8] = args
+        .take(3)
+        .filter_map(|arg| arg.parse().ok())
+        .collect::<Vec<u8>>()[..]
+    else {
+        eprintln!("Expected 3 arguments found {args_len}.");
+        eprintln!("Expected format: ./ut3_oxide <depth for ai_x> <depth for ai_o> <iterations>");
+        eprintln!("Try `./ut3_oxide 5 5 10` ");
+        return;
+    };
 
     let ai_x = AI::new(bitflag::X_PLAYER);
     let ai_o = AI::new(bitflag::O_PLAYER);
@@ -50,7 +45,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
     for _ in 0..iterations {
         loop {
             //let now = std::time::Instant::now();
-            let (_, (row, column)) = ai_x.calculate_move_par(&board, depth_1);
+            let (_, (row, column)) = ai_x.calculate_move_par(&board, depth_ai_x);
             //let elapsed = now.elapsed();
             //println!("x: {:.2}", elapsed.as_micros());
             board.do_move(row, column, bitflag::X_PLAYER);
@@ -63,7 +58,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
 
             // ai move
             //let now = std::time::Instant::now();
-            let (_, (row, column)) = ai_o.calculate_move_par(&board, depth_2);
+            let (_, (row, column)) = ai_o.calculate_move_par(&board, depth_ai_o);
             //let elapsed = now.elapsed();
             //println!("o: {:.2}", elapsed.as_micros());
             board.do_move(row, column, 2);
@@ -104,7 +99,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
     let drawrate = (draws as f64 / total as f64) * 100.0;
 
     println!(
-        "wr @ depth {depth_1} X: {wrx:.2}% ({wins}/{total})\nwr @ depth {depth_2} O: {wro:.2}% ({losses}/{total})
+        "wr @ depth {depth_ai_x} X: {wrx:.2}% ({wins}/{total})\nwr @ depth {depth_ai_o} O: {wro:.2}% ({losses}/{total})
         — total games: {total}
         — average total turns: {average_turns:.2} of total {total_turns}
         — draws: {drawrate:.2}% ({draws}/{total}),"
@@ -146,26 +141,28 @@ fn player_vs_ai() {
             break;
         }
 
-        // println!("{board:#}");
         // ai move
         let now = std::time::Instant::now();
         let (eval, (row, column)) = ai_x.calculate_move_par(&tracked.board, 5);
         let elapsed = now.elapsed();
         tracked.do_move(row, column, 2);
 
+        // Clear screen
         print!("\x1B[2J\x1B[1;1H");
+
         println!("{:#}", tracked.board);
+
+        let norm = normalise(eval as f32, -2300., 2300.);
+        println!("Score: {eval} -> {:.2}", norm);
+        print_eval_bar(norm, 30);
+        println!();
+
         println!(
-            "{row} {column} move in -> {} ({} ms | {} μs)",
+            "AI plays {row} {column} -- Play in miniboard -> {} ({} ms | {} μs)",
             Board::move_corresponding_miniboard(row, column),
             elapsed.as_millis(),
             elapsed.as_micros(),
         );
-
-        // let eval = ai_x.evaluate(board);
-        let norm = normalise(eval as f32, -2300., 2300.);
-        println!("score: {eval} -> {:.2}", norm);
-        eval_bar(norm, 30);
 
         let game_status = tracked.board.calculate_game_status();
         if game_status != bitflag::STATUS_CONTESTABLE {
@@ -201,12 +198,6 @@ fn ask_move(tracked: &mut TrackedBoard) -> Option<(u8, u8)> {
         println!("See ya! :)");
         std::process::exit(0);
     }
-    //println!("\n{input}");
-
-    //let [row, col, ..] = input
-    //    .split_whitespace()
-    //    .map(|sn| sn.parse().expect("Should have parsed the number {sn}"))
-    //    .collect::<Vec<u8>>()[..] else { return None };
 
     if input.len() != 2 {
         return None;
@@ -236,7 +227,7 @@ fn norm() {
     println!("{:.2}", normalise(100., -50., 2000.));
 }
 
-fn eval_bar(norm: f32, width: u8) {
+fn print_eval_bar(norm: f32, width: u8) {
     const BASE_BAR: &str = "\x1b[34m█\x1b[0m";
     let base = BASE_BAR.repeat(width as usize);
     let s = base.replacen(
@@ -249,7 +240,7 @@ fn eval_bar(norm: f32, width: u8) {
 
 #[test]
 fn evalbar() {
-    eval_bar(0.3, 30);
-    eval_bar(0.4, 30);
-    eval_bar(0.05, 30);
+    print_eval_bar(0.3, 30);
+    print_eval_bar(0.4, 30);
+    print_eval_bar(0.05, 30);
 }
