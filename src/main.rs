@@ -10,8 +10,9 @@ use std::io::{self, Write};
 fn main() {
     let mut args = std::env::args();
     _ = args.next(); // program name
-    if args.len() == 0 {
-        player_vs_ai();
+
+    if args.len() == 1 {
+        player_vs_ai(&mut args);
     } else {
         ai_vs_ai(&mut args);
     }
@@ -106,7 +107,15 @@ fn ai_vs_ai(args: &mut std::env::Args) {
     );
 }
 
-fn player_vs_ai() {
+fn player_vs_ai(args: &mut std::env::Args) {
+
+    let depth = match args.next() {
+        Some(d) => d.parse().unwrap_or(5),
+        None => 5,
+    };
+
+    println!("\nAI search depth: {depth}...");
+
     let ai_x = AI::new(bitflag::X_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
 
@@ -117,11 +126,11 @@ fn player_vs_ai() {
             print!("\x1B[2J\x1B[1;1H");
             println!("{:#}", tracked.board);
             println!("invalid!");
-            let (lr, lc) = tracked.board.last_move;
-            println!(
-                "{lr} {lc} move in -> {}",
-                Board::move_corresponding_miniboard(lr, lc)
-            );
+            // let (lr, lc) = tracked.board.last_move;
+            // println!(
+            //     "{lr} {lc} move in -> {}",
+            //     Board::move_corresponding_miniboard(lr, lc)
+            // );
             continue;
         };
 
@@ -143,7 +152,7 @@ fn player_vs_ai() {
 
         // ai move
         let now = std::time::Instant::now();
-        let (eval, (row, column)) = ai_x.calculate_move_par(&tracked.board, 5);
+        let (eval, (row, column)) = ai_x.calculate_move_par(&tracked.board, depth);
         let elapsed = now.elapsed();
         tracked.do_move(row, column, 2);
 
@@ -153,13 +162,12 @@ fn player_vs_ai() {
         println!("{:#}", tracked.board);
 
         let norm = normalise(eval as f32, -2300., 2300.);
-        println!("Score: {eval} -> {:.2}", norm);
+        println!("Score: {eval} -> {norm:.2}\n");
         print_eval_bar(norm, 30);
         println!();
 
         println!(
-            "AI plays {row} {column} -- Play in miniboard -> {} ({} ms | {} μs)",
-            Board::move_corresponding_miniboard(row, column),
+            "AI: ({row}, {column}) — ({} ms | {} μs)",
             elapsed.as_millis(),
             elapsed.as_micros(),
         );
@@ -168,7 +176,6 @@ fn player_vs_ai() {
         if game_status != bitflag::STATUS_CONTESTABLE {
             _ = io::stdout().flush();
             println!("Game over: result {game_status}");
-            tracked.board.display_mb_statuses();
             break;
         }
     }
