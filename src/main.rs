@@ -11,10 +11,41 @@ fn main() {
     let mut args = std::env::args();
     _ = args.next(); // program name
 
+    player_vs_player();
+
     if args.len() == 1 {
         player_vs_ai(&mut args);
     } else {
         ai_vs_ai(&mut args);
+    }
+}
+
+fn player_vs_player() {
+    let mut turn: u8 = 0;
+    let mut post_game_view = false;
+    let mut tracked = TrackedBoard::new(Board::new());
+    let symbol = ["\x1B[0;34mX\x1B[0m", "\x1B[0;31mO\x1B[0m"];
+
+    print!("\x1B[2J\x1B[1;1H");
+    println!("{:#}", tracked.board);
+
+    loop {
+        println!("Player {}'s turn", symbol[usize::from(turn % 2)]);
+
+        if let Some((row, column)) = ask_move(&mut tracked, &mut post_game_view)
+            && tracked.board.is_valid_move(row, column)
+        {
+            tracked.do_move(row, column, turn % 2 + 1);
+            turn += 1;
+        } else {
+            print!("\x1B[2J\x1B[1;1H");
+            println!("{:#}", tracked.board);
+            println!("\x1b[41m invalid! \x1b[0m");
+            continue;
+        }
+
+        print!("\x1B[2J\x1B[1;1H");
+        println!("{:#}", tracked.board);
     }
 }
 
@@ -108,7 +139,6 @@ fn ai_vs_ai(args: &mut std::env::Args) {
 }
 
 fn player_vs_ai(args: &mut std::env::Args) {
-
     let depth = match args.next() {
         Some(d) => d.parse().unwrap_or(5),
         None => 5,
@@ -118,19 +148,15 @@ fn player_vs_ai(args: &mut std::env::Args) {
 
     let ai_x = AI::new(bitflag::X_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
+    let mut post_game_view = false;
 
     println!("{:#}", tracked.board);
 
     loop {
-        let Some((row, column)) = ask_move(&mut tracked) else {
+        let Some((row, column)) = ask_move(&mut tracked, &mut post_game_view) else {
             print!("\x1B[2J\x1B[1;1H");
             println!("{:#}", tracked.board);
             println!("invalid!");
-            // let (lr, lc) = tracked.board.last_move;
-            // println!(
-            //     "{lr} {lc} move in -> {}",
-            //     Board::move_corresponding_miniboard(lr, lc)
-            // );
             continue;
         };
 
@@ -173,17 +199,23 @@ fn player_vs_ai(args: &mut std::env::Args) {
         );
 
         let game_status = tracked.board.calculate_game_status();
-        if game_status != bitflag::STATUS_CONTESTABLE {
+        if game_status != bitflag::STATUS_CONTESTABLE || post_game_view {
+            post_game_view = true;
             _ = io::stdout().flush();
-            println!("Game over: result {game_status}");
-            break;
+            println!("Game over: result {game_status} — Exit? (y/n): ");
+
+            let mut input = String::with_capacity(1);
+            let got_input = io::stdin().read_line(&mut input);
+            if let (Ok(_), "y") = (got_input, input.as_str()) {
+                break;
+            }
         }
     }
 }
 
-fn ask_move(tracked: &mut TrackedBoard) -> Option<(u8, u8)> {
+fn ask_move(tracked: &mut TrackedBoard, post_game_view: &mut bool) -> Option<(u8, u8)> {
     print!("Enter a move as \"rowcol\" like \"43\": ");
-    let _ = io::stdout().flush();
+    _ = io::stdout().flush();
 
     let mut input = String::new();
     io::stdin()
@@ -193,11 +225,14 @@ fn ask_move(tracked: &mut TrackedBoard) -> Option<(u8, u8)> {
     let input = input.trim_end();
     if input == "u" {
         println!("Move undone!");
+        *post_game_view = false;
         // undo twice for the AI and the player
         tracked.undo_move();
         tracked.undo_move();
         return None;
     } else if input == "r" {
+        *post_game_view = false;
+
         println!("Game reset!");
         tracked.reset();
         return None;
