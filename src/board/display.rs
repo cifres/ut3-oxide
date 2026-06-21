@@ -28,7 +28,22 @@ impl fmt::Display for Board {
         // (board:#)
         if f.alternate() {
             writeln!(f)?;
-            writeln!(f, "    0 1 2   3 4 5   6 7 8  ")?;
+
+            // Crudely colour coordinate if it has a valid cell
+            let valid_cols = (0..9).map(|c| self.valid_moves().any(|vc| vc.1 == c)).collect::<Vec<bool>>();
+            let valid_rows = (0..9).map(|c| self.valid_moves().any(|vr| vr.0 == c)).collect::<Vec<bool>>();
+
+            let col_string = "    0 1 2   3 4 5   6 7 8  ";
+            for c in col_string.split("") {
+                if c.is_empty() || c == " " || !valid_cols[c.parse::<usize>().unwrap()] {
+                    write!(f, "{c}")?;
+                    continue;
+                }
+                write!(f, "\x1b[32m{c}\x1b[0m")?;
+            }
+
+            writeln!(f)?;
+
             writeln!(f, "  ┌───────┬───────┬───────┐")?;
             for row in 0..9 {
                 for column in 0..9 {
@@ -36,7 +51,11 @@ impl fmt::Display for Board {
                     let mvmbstatus = self.get_status_of(Self::move_miniboard(row, column));
 
                     if column == 0 {
-                        write!(f, "{row} │ ")?;
+                        if valid_rows[row as usize] {
+                            write!(f, "\x1b[32m{row}\x1b[0m │ ")?;
+                        } else {
+                            write!(f, "{row} │ ")?;
+                        }
                     }
 
                     // Backspace once and then start colouring
@@ -79,7 +98,7 @@ impl fmt::Display for Board {
                     "[{i}]: cells[{:018b}] — meta[{:014b}]",
                     self.get_row_cells(i as u8),
                     self.main_board[i] >> 18
-                )?
+                )?;
             }
 
             Ok(())
