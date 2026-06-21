@@ -11,28 +11,27 @@ fn main() {
     let mut args = std::env::args();
     _ = args.next(); // program name
 
-    player_vs_player();
-
-    if args.len() == 1 {
-        player_vs_ai(&mut args);
-    } else {
-        ai_vs_ai(&mut args);
+    match args.len() {
+        0 => player_vs_player(),
+        1 => player_vs_ai(&mut args),
+        _ => ai_vs_ai(&mut args), // It deals with any number of arguments
     }
 }
 
 fn player_vs_player() {
     let mut turn: u8 = 0;
-    let mut post_game_view = false;
+    let mut is_game_over = false;
     let mut tracked = TrackedBoard::new(Board::new());
     let symbol = ["\x1B[0;34mX\x1B[0m", "\x1B[0;31mO\x1B[0m"];
+    let mut input_buffer = String::with_capacity(2);
 
     print!("\x1B[2J\x1B[1;1H");
     println!("{:#}", tracked.board);
 
     loop {
-        println!("Player {}'s turn", symbol[usize::from(turn % 2)]);
+        println!("{}'s turn", symbol[usize::from(turn % 2)]);
 
-        if let Some((row, column)) = ask_move(&mut tracked, &mut post_game_view)
+        if let Some((row, column)) = ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, false)
             && tracked.board.is_valid_move(row, column)
         {
             tracked.do_move(row, column, turn % 2 + 1);
@@ -40,12 +39,29 @@ fn player_vs_player() {
         } else {
             print!("\x1B[2J\x1B[1;1H");
             println!("{:#}", tracked.board);
-            println!("\x1b[41m invalid! \x1b[0m");
+            match input_buffer.trim() {
+                "u" => turn = turn.saturating_sub(1),
+                "r" => turn = 0,
+                _ => println!("\x1b[41m invalid! \x1b[0m"),
+            }
+
             continue;
         }
 
         print!("\x1B[2J\x1B[1;1H");
         println!("{:#}", tracked.board);
+
+        let status = tracked.board.calculate_game_status();
+        if status != bitflag::STATUS_CONTESTABLE {
+            is_game_over = true;
+            match status {
+                bitflag::STATUS_O_WIN | bitflag::STATUS_X_WIN => {
+                    println!("{} Wins!", symbol[usize::from(status - 1)]);
+                }
+                bitflag::STATUS_DRAW => println!("Draw!"),
+                _ => unreachable!(),
+            }
+        }
     }
 }
 
@@ -148,12 +164,13 @@ fn player_vs_ai(args: &mut std::env::Args) {
 
     let ai_x = AI::new(bitflag::X_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
-    let mut post_game_view = false;
+    let mut is_game_over = false;
+    let mut input_buffer = String::with_capacity(2);
 
     println!("{:#}", tracked.board);
 
     loop {
-        let Some((row, column)) = ask_move(&mut tracked, &mut post_game_view) else {
+        let Some((row, column)) = ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, true) else {
             print!("\x1B[2J\x1B[1;1H");
             println!("{:#}", tracked.board);
             println!("invalid!");
@@ -199,8 +216,8 @@ fn player_vs_ai(args: &mut std::env::Args) {
         );
 
         let game_status = tracked.board.calculate_game_status();
-        if game_status != bitflag::STATUS_CONTESTABLE || post_game_view {
-            post_game_view = true;
+        if game_status != bitflag::STATUS_CONTESTABLE || is_game_over {
+            is_game_over = true;
             _ = io::stdout().flush();
             println!("Game over: result {game_status} — Exit? (y/n): ");
 
@@ -213,25 +230,39 @@ fn player_vs_ai(args: &mut std::env::Args) {
     }
 }
 
-fn ask_move(tracked: &mut TrackedBoard, post_game_view: &mut bool) -> Option<(u8, u8)> {
-    print!("Enter a move as \"rowcol\" like \"43\": ");
+fn ask_move(
+    tracked: &mut TrackedBoard,
+    input_buffer: &mut String,
+    is_game_over: &mut bool,
+    is_p_v_ai: bool,
+) -> Option<(u8, u8)> {
+    if *is_game_over {
+        print!("Game over! (u)ndo, (r)eset, (q)uit?");
+    } else {
+        print!("Enter a move as \"rowcol\" like \"43\": ");
+    }
     _ = io::stdout().flush();
 
-    let mut input = String::new();
+    input_buffer.clear();
+
     io::stdin()
-        .read_line(&mut input)
+        .read_line(input_buffer)
         .expect("Couldn't get the input");
 
-    let input = input.trim_end();
+    // Parse undo, reset, and quit
+    let input = input_buffer.trim();
     if input == "u" {
-        println!("Move undone!");
-        *post_game_view = false;
+        *is_game_over = false;
         // undo twice for the AI and the player
+        println!("Move undone!");
         tracked.undo_move();
-        tracked.undo_move();
+        if is_p_v_ai {
+            tracked.undo_move();
+        }
+
         return None;
     } else if input == "r" {
-        *post_game_view = false;
+        *is_game_over = false;
 
         println!("Game reset!");
         tracked.reset();
@@ -241,21 +272,17 @@ fn ask_move(tracked: &mut TrackedBoard, post_game_view: &mut bool) -> Option<(u8
         std::process::exit(0);
     }
 
-    if input.len() != 2 {
+    // Otherwise parse a move
+    if input.len() != 2 || *is_game_over {
         return None;
     }
 
+    // E.g. "47" -> (4, 7)
     let split_at = input.split_at(1);
-    let (row, col): (u8, u8) = (
-        split_at.0.parse().unwrap_or(9),
-        split_at.1.parse().unwrap_or(9),
-    );
-
-    if row == 9 || col == 9 {
-        return None;
+    match (split_at.0.parse(), split_at.1.parse()) {
+        (Ok(row @ 0..=8), Ok(col @ 0..=8)) => Some((row, col)),
+        _ => None,
     }
-
-    Some((row, col))
 }
 
 fn normalise(n: f32, min: f32, max: f32) -> f32 {
