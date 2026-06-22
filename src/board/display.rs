@@ -28,8 +28,10 @@ impl fmt::Display for Board {
         // (board:#)
         if f.alternate() {
             writeln!(f)?;
+            // TODO: highlight last move
 
             // Crudely colour coordinate if it has a valid cell
+            // TODO: Valid moves iter -> add to [rows] [cols] separate vec
             let valid_cols = (0..9).map(|c| self.valid_moves().any(|vc| vc.1 == c)).collect::<Vec<bool>>();
             let valid_rows = (0..9).map(|c| self.valid_moves().any(|vr| vr.0 == c)).collect::<Vec<bool>>();
 

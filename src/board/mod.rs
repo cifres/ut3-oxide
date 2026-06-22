@@ -3,6 +3,7 @@ mod iterator;
 pub mod move_tracker;
 pub mod rules;
 
+// TODO: enum?
 pub mod bitflag {
     const _CELL_LEN                         : u8 = 2;
     pub const CELL_MASK                     : u32 = 0b11;
@@ -32,7 +33,7 @@ pub mod bitflag {
     /// Not part of row metadata; used for `board.xo_miniboard_win_count`
     pub const MINIBOARD_WIN_COUNT_MASK      : u8 = 0b111;
 
-    /// These are not magic coordintes. See [Board.is_first_move]
+    /// These are not magic coordintes. See [`Board.is_first_move`]
     pub const NEW_GAME                      : (u8, u8) = (0, 0);
 }
 
@@ -42,8 +43,8 @@ pub mod bitflag {
 /// `[14 bits meta data — 18 bits cell data]`
 ///     * `9` cells x `2` bits per cell = `18` bits
 ///     * meta data `[0000 — 0000 — 0000 — 00]`
-///         * `4` bits move_count_total — move_count o `4` bits — move_count x `4` bits — miniboard_status `2` bits
-/// xo_miniboard_win_count: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
+///         * `4` bits `move_count_total` — `move_count` `O` `4` bits — `move_count` `X` `4` bits — `miniboard_status` `2` bits
+/// `xo_miniboard_win_count`: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Board {
     pub main_board: [u32; 9],
