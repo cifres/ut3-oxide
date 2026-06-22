@@ -22,7 +22,6 @@ impl TrackedBoard {
 
     pub fn undo_move(&mut self) -> bool {
         let Some(board) = self.history.pop() else {
-            eprintln!("No history to undo from");
             return false;
         };
 
