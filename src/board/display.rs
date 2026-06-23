@@ -28,7 +28,6 @@ impl fmt::Display for Board {
         // (board:#)
         if f.alternate() {
             writeln!(f)?;
-            // TODO: highlight last move
 
             // Crudely colour coordinate if it has a valid cell
             // TODO: Valid moves iter -> add to [rows] [cols] separate vec
@@ -48,11 +47,11 @@ impl fmt::Display for Board {
 
             writeln!(f, "  ┌───────┬───────┬───────┐")?;
             for row in 0..9 {
-                for column in 0..9 {
-                    let cell = self.get_cell(row, column);
-                    let mvmbstatus = self.get_status_of(Self::move_miniboard(row, column));
+                for col in 0..9 {
+                    let cell = self.get_cell(row, col);
+                    let cellmbstatus = self.get_status_of(Self::move_miniboard(row, col));
 
-                    if column == 0 {
+                    if col == 0 {
                         if valid_rows[row as usize] {
                             write!(f, "\x1b[32m{row}\x1b[0m │ ")?;
                         } else {
@@ -60,24 +59,30 @@ impl fmt::Display for Board {
                         }
                     }
 
-                    // Backspace once and then start colouring
-                    let repr = match (cell, mvmbstatus) {
-                       (0, _) if self.is_valid_move(row, column) => "\x1b[32m─ \x1b[0m",
-                       (0, 1) => "\x08 \x08\x1b[44m _ \x1b[0m",
-                       (0, 2) => "\x08 \x08\x1b[41m _ \x1b[0m",
-                       (1, 1) => "\x08 \x08\x1b[44m X \x1b[0m",
-                       (1, 2) => "\x08 \x08\x1b[41m X \x1b[0m",
-                       (2, 1) => "\x08 \x08\x1b[44m O \x1b[0m",
-                       (2, 2) => "\x08 \x08\x1b[41m O \x1b[0m",
-                       (0, _) => "─ ",
-                       (1, _) => "\x1b[0;34mX \x1b[0m",
-                       (2, _) => "\x1b[0;31mO \x1b[0m",
+                    // Backspace once and then start colouring because the default case is "_ "
+                    // where the each character includes a space after it and thus relies on the
+                    // previous character's space
+                    let repr = match (cell, cellmbstatus) {
+                        (0, _) if self.is_valid_move(row, col) => "\x1b[32m─ \x1b[0m",
+                        (1, 1) if (row, col) == self.last_move => "\x08 \x08\x1b[1;5;44m X \x1b[0m",
+                        (2, 2) if (row, col) == self.last_move => "\x08 \x08\x1b[1;5;41m O \x1b[0m",
+                        (1, _) if (row, col) == self.last_move => " \x08 \x08\x1b[1;5;34mX\x1b[0m ",
+                        (2, _) if (row, col) == self.last_move => " \x08 \x08\x1b[1;5;31mO\x1b[0m ",
+                        (0, 1) => "\x08 \x08\x1b[44m _ \x1b[0m",
+                        (0, 2) => "\x08 \x08\x1b[41m _ \x1b[0m",
+                        (1, 1) => "\x08 \x08\x1b[44m X \x1b[0m",
+                        (2, 1) => "\x08 \x08\x1b[44m O \x1b[0m",
+                        (1, 2) => "\x08 \x08\x1b[41m X \x1b[0m",
+                        (2, 2) => "\x08 \x08\x1b[41m O \x1b[0m",
+                        (0, _) => "─ ",
+                        (1, _) => "\x1b[0;34mX \x1b[0m",
+                        (2, _) => "\x1b[0;31mO \x1b[0m",
                         _ => unreachable!(),
                     };
 
                     write!(f, "{repr}")?;
 
-                    if (column + 1) % 3 == 0 {
+                    if (col + 1) % 3 == 0 {
                         write!(f, "│ ")?;
                     }
                 }
