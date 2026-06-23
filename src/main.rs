@@ -1,5 +1,7 @@
 #![warn(clippy::pedantic)]
 
+// TODO: (h)int, tutorial?
+
 mod ai;
 mod board;
 
@@ -58,7 +60,14 @@ fn player_vs_player() {
             is_game_over = true;
             match status {
                 bitflag::STATUS_O_WIN | bitflag::STATUS_X_WIN => {
-                    println!("{} Wins!", SYMBOL[usize::from(status - 1)]);
+                    let mv_cnt = (0..9)
+                        .map(|n| tracked.board.get_player_move_count_of(n, status))
+                        .sum::<u8>();
+
+                    println!(
+                        "{} \x1b[1mWins in {mv_cnt} moves\x1b[0m!",
+                        SYMBOL[usize::from(status - 1)]
+                    );
                 }
                 bitflag::STATUS_DRAW => println!("Draw!"),
                 _ => unreachable!(),
@@ -114,14 +123,13 @@ fn ai_vs_ai(args: &mut std::env::Args) {
             board.do_move(row, column, 2);
             total_turns += 1;
 
-            //println!("\x1B[2J\x1B[1;1H");
-            //println!("{board:#}");
-            //println!(
-            //    "{row} {column} move in -> {}",
-            //    Board::move_corresponding_miniboard(row, column)
-            //);
-
             let game_status = board.calculate_game_status();
+
+            // println!("\x1B[2J\x1B[1;1H");
+            // println!("{board:#}");
+            // _ = std::io::stdout().flush();
+            // std::thread::sleep(std::time::Duration::from_millis(750));
+
             if game_status != bitflag::STATUS_CONTESTABLE {
                 status = game_status;
                 break;
@@ -162,83 +170,90 @@ fn player_vs_ai(args: &mut std::env::Args) {
         _ => unreachable!(),
     };
 
-    println!("\nAI search depth: {depth}...");
-
     let ai_o = AI::new(bitflag::O_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
     let mut is_game_over = false;
     let mut input_buffer = String::with_capacity(2);
 
+    let mut is_player_turn = true;
+    let mut ai_messages = String::with_capacity(760);
+    let mut ai_eval_buffer = String::with_capacity(40);
+
     print!("\x1B[2J\x1B[1;1H");
+    println!("Welcome! You may (u)ndo, (r)eset or (q)uit any time.");
     println!("{:#}", tracked.board);
 
     loop {
-        if let Some((row, column)) =
-            ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, true)
-            && tracked.board.is_valid_move(row, column)
-        {
-            tracked.do_move(row, column, bitflag::X_PLAYER);
-        } else {
-            print!("\x1B[2J\x1B[1;1H");
-            println!("{:#}", tracked.board);
+        if is_player_turn {
+            if let Some((row, column)) =
+                ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, true)
+                && tracked.board.is_valid_move(row, column)
+            {
+                // TOOD (h)int
+                tracked.do_move(row, column, bitflag::X_PLAYER);
+            } else {
+                print!("\x1B[2J\x1B[1;1H");
+                println!("{:#}", tracked.board);
 
-            if !matches!(input_buffer.trim(), "u" | "r") {
-                println!("\x1b[41m invalid! \x1b[0m");
-            }
-
-            continue;
-        }
-
-        let game_status = tracked.board.calculate_game_status();
-        if game_status != bitflag::STATUS_CONTESTABLE {
-            _ = io::stdout().flush();
-            match game_status {
-                bitflag::STATUS_O_WIN | bitflag::STATUS_X_WIN => {
-                    println!("{} Wins!", SYMBOL[usize::from(game_status - 1)]);
+                if !matches!(input_buffer.trim(), "u" | "r") {
+                    println!("\x1b[41m invalid! \x1b[0m");
                 }
-                bitflag::STATUS_DRAW => println!("Draw!"),
-                _ => unreachable!(),
-            }
-            tracked.board.display_mb_statuses();
-            break;
-        }
 
-        // ai move
-        let now = std::time::Instant::now();
-        let (eval, (row, column)) = ai_o.calculate_move_par(&tracked.board, depth);
-        let elapsed = now.elapsed();
-        tracked.do_move(row, column, bitflag::O_PLAYER);
+                continue;
+            }
+        } else {
+            // ai move
+            let now = std::time::Instant::now();
+            let (eval, (row, column)) = ai_o.calculate_move_par(&tracked.board, depth);
+            let elapsed = now.elapsed();
+            tracked.do_move(row, column, bitflag::O_PLAYER);
+
+            let norm = normalise(eval as f32, -5700., 5700.);
+
+            get_eval_bar(norm, 30, &mut ai_eval_buffer);
+            ai_messages.push_str(format!("Score: {eval} -> {norm:.2}\n{ai_eval_buffer}").as_str());
+
+            // Adapatively select display units
+            let duration = match elapsed.as_micros() {
+                micros @ 0..=1000 => format!("{micros} μs"),
+                micros_to_ms @ 1001.. => format!("{}~ ms", micros_to_ms / 1000),
+            };
+
+            ai_messages.push_str(
+                format!("\n\nAI @ depth {depth} in {duration}: ({row}, {column})\n").as_str(),
+            );
+
+            println!("end {}", ai_messages.capacity());
+        }
 
         // Clear and redraw
         print!("\x1B[2J\x1B[1;1H");
         println!("{:#}", tracked.board);
 
-        let norm = normalise(eval as f32, -2300., 2300.);
-        println!("Score: {eval} -> {norm:.2}\n");
-        print_eval_bar(norm, 30);
-        println!();
-
-        // Adapatively select display units
-        let duration = match elapsed.as_micros() {
-            micros @ 0..=1000 => format!("{micros} μs"),
-            micros_to_ms @ 1001.. => format!("{}~ ms", micros_to_ms / 1000),
-        };
-
-        println!("AI @ depth {depth} in — {duration}: ({row}, {column})");
+        println!("{ai_messages}");
+        ai_messages.clear();
 
         let game_status = tracked.board.calculate_game_status();
-        if game_status != bitflag::STATUS_CONTESTABLE {
+        if game_status != bitflag::STATUS_CONTESTABLE || is_game_over {
+            is_game_over = true;
             _ = io::stdout().flush();
             match game_status {
                 bitflag::STATUS_O_WIN | bitflag::STATUS_X_WIN => {
-                    println!("{} Wins!", SYMBOL[usize::from(game_status - 1)]);
+                    let mv_cnt = (0..9)
+                        .map(|n| tracked.board.get_player_move_count_of(n, game_status))
+                        .sum::<u8>();
+
+                    println!(
+                        "{} \x1b[1mWins in {mv_cnt} moves\x1b[0m!",
+                        SYMBOL[usize::from(game_status - 1)]
+                    );
                 }
                 bitflag::STATUS_DRAW => println!("Draw!"),
                 _ => unreachable!(),
             }
-            tracked.board.display_mb_statuses();
-            break;
         }
+
+        is_player_turn = !is_player_turn;
     }
 }
 
@@ -249,7 +264,7 @@ fn ask_move(
     is_p_v_ai: bool,
 ) -> Option<(u8, u8)> {
     if *is_game_over {
-        print!("Game over! (u)ndo, (r)eset, (q)uit?");
+        print!("Game over! (u)ndo, (r)eset, (q)uit? ");
     } else {
         print!("Enter a move as \"rowcol\" like \"43\": ");
     }
@@ -308,20 +323,20 @@ fn norm() {
     println!("{:.2}", normalise(100., -50., 2000.));
 }
 
-fn print_eval_bar(norm: f32, width: u8) {
+fn get_eval_bar(norm: f32, width: u8, buffer: &mut String) {
     const BASE_BAR: &str = "\x1b[34m█\x1b[0m";
     let base = BASE_BAR.repeat(width as usize);
-    let s = base.replacen(
+    *buffer = base.replacen(
         BASE_BAR,
         "\x1b[31m█\x1b[0m",
         (norm * width as f32).round() as usize,
     );
-    println!("{s}");
+    // println!("{s}");
 }
 
 #[test]
 fn evalbar() {
-    print_eval_bar(0.3, 30);
-    print_eval_bar(0.4, 30);
-    print_eval_bar(0.05, 30);
+    // get_eval_bar(0.3, 30);
+    // get_eval_bar(0.4, 30);
+    // get_eval_bar(0.05, 30);
 }
