@@ -164,7 +164,7 @@ fn player_vs_ai(args: &mut std::env::Args) {
 
     println!("\nAI search depth: {depth}...");
 
-    let ai_x = AI::new(bitflag::X_PLAYER);
+    let ai_o = AI::new(bitflag::O_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
     let mut is_game_over = false;
     let mut input_buffer = String::with_capacity(2);
@@ -177,7 +177,7 @@ fn player_vs_ai(args: &mut std::env::Args) {
             ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, true)
             && tracked.board.is_valid_move(row, column)
         {
-            tracked.do_move(row, column, 1);
+            tracked.do_move(row, column, bitflag::X_PLAYER);
         } else {
             print!("\x1B[2J\x1B[1;1H");
             println!("{:#}", tracked.board);
@@ -205,9 +205,9 @@ fn player_vs_ai(args: &mut std::env::Args) {
 
         // ai move
         let now = std::time::Instant::now();
-        let (eval, (row, column)) = ai_x.calculate_move_par(&tracked.board, depth);
+        let (eval, (row, column)) = ai_o.calculate_move_par(&tracked.board, depth);
         let elapsed = now.elapsed();
-        tracked.do_move(row, column, 2);
+        tracked.do_move(row, column, bitflag::O_PLAYER);
 
         // Clear and redraw
         print!("\x1B[2J\x1B[1;1H");
