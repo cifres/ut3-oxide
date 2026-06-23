@@ -275,11 +275,10 @@ impl Board {
         false
     }
 
-    // TODO: only check miniboards with move_count > 2
-
-    // Compare against last player's move only for masking
     /// Determine if there's a winner with `flag::STATUS_X_WIN` or `flag::STATUS_O_WIN`
-    /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`
+    /// or neither through `flag::STATUS_DRAW` or `flag::STATUS_CONTESTABLE`.
+    /// Note status calculation is lazy and is only triggered by the previous move being a miniboard
+    /// winner
     /// # Example
     /// ```
     /// # use ut3_oxide::board::Board;
@@ -288,7 +287,7 @@ impl Board {
     /// board.do_move(4, 3, 1);
     /// board.do_move(4, 4, 1);
     /// board.do_move(4, 5, 1);
-    /// // Emulate winnning two more in a line
+    /// // Emulate winning two more in a line
     /// board.set_status_of(3, 1);
     /// board.set_status_of(5, 1);
     /// assert_eq!(board.calculate_game_status(), 1);

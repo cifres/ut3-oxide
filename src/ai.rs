@@ -91,7 +91,10 @@ impl AI {
         }
     }
 
-    /// Generates a move in parallel at `depth` given the `Board` state.
+    /// Generates a move in parallel at `depth` given the `[Board]` state.
+    /// # Panics
+    /// Panics if called on a [`Board`] state with no `valid moves`.
+    ///
     /// # Example
     /// ```
     /// # use ut3_oxide::{board::Board, ai::AI};
@@ -114,8 +117,6 @@ impl AI {
             })
             .max_by_key(|(score, (_, _))| *score);
 
-        //println!("{bstmv:?}");
-        //println!("best {best_move:?} score {best_score} at depth {DEPTH}");
         bstmv.expect("a move should've been selected")
     }
 
