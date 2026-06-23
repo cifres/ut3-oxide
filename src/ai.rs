@@ -8,8 +8,8 @@ use crate::board::{
 
 // Basic multiplier and weight adjustment for what is valued
 const SCORE_UNIT                 : i16 = 10;
-const MINIBOARD_WIN_COUNT        : i16 = 24; // increase?
-const CENTRE_MB_CONTROL          : i16 = 25;
+const MINIBOARD_WIN_COUNT        : i16 = 100; // increase?
+const CENTRE_MB_CONTROL          : i16 = 250;
 const CENTRE_CELL_CONTROL        : i16 = 1;
 const FREE_MOVE_CELL_SAME_MB     : i16 = 3;
 const UNCONTESTABLE_MB_POINTED_AT: i16 = 3;
@@ -149,7 +149,7 @@ impl AI {
         if is_max {
             let mut score = i16::MIN;
             for (row, column) in board.valid_moves() {
-                let mut board = board.clone(); //NOTE: hot
+                let mut board = board.clone();
                 board.do_move(row, column, self.ai_shape);
                 score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
                 //score = score.max(self.alphabeta_mm(board, depth - 1, alpha, beta, false));
@@ -167,8 +167,6 @@ impl AI {
                 let mut board = board.clone();
                 board.do_move(row, column, self.opponent_shape);
                 score = score.min(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, true));
-                //score = score.min(self.alphabeta_mm(board, depth - 1, alpha, beta, true));
-                //board.undo_move();
                 beta = beta.min(score);
                 if score <= alpha {
                     break;
@@ -209,12 +207,14 @@ impl AI {
 
         /////* Miniboards won */////
 
+        // let pre_score = score;
+
         score += ((board.get_miniboard_win_count_of(self.ai_shape) as i16)
             - (board.get_miniboard_win_count_of(self.opponent_shape)) as i16)
             * SCORE_UNIT
             * MINIBOARD_WIN_COUNT;
 
-        // println!("@ mbs won {score}");
+        // println!("@ mbs won {score} - diff {}", score - pre_score);
 
         /////* centre-control: board-wide and in individual miniboards */////
 
