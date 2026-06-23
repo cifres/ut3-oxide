@@ -53,7 +53,7 @@ pub struct Board {
 }
 
 impl Board {
-    /// Creates a new, empty `Board`.
+    /// Creates a new, empty [`Board`].
     ///
     // # Example
     /// ```
