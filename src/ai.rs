@@ -60,7 +60,7 @@ const LINE_PATTERNS: [[(u8, u8); 6]; 8] = const {
 
 #[derive(Debug, Clone, Copy)]
 pub struct AI {
-    ai_shape: u8,
+    pub ai_shape: u8,
     opponent_shape: u8,
 }
 

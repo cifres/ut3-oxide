@@ -120,38 +120,24 @@ fn ai_vs_ai(args: &mut std::env::Args) {
         None => 500,
     };
 
-    let ai_x = AI::new(bitflag::X_PLAYER);
-    let ai_o = AI::new(bitflag::O_PLAYER);
-
     let mut wins = 0u16;
     let mut draws = 0u16;
     let mut losses = 0u16;
     let mut total_turns = 0u32;
     let mut status;
 
+    let ai_xo = [AI::new(bitflag::X_PLAYER), AI::new(bitflag::O_PLAYER)];
+    let ai_xo_depth = [depth_ai_x, depth_ai_o];
     for _ in 0..iterations {
         loop {
-            //let now = std::time::Instant::now();
-            let (_, (row, column)) = ai_x.calculate_move_par(&board, depth_ai_x);
-            //let elapsed = now.elapsed();
-            //println!("x: {:.2}", elapsed.as_micros());
-            board.do_move(row, column, bitflag::X_PLAYER);
+            // Due to turns % 2, whoever does the finishing move starts second. Thus they swap
+            // who plays first.
+            let i = total_turns as usize % 2;
+            let ai = ai_xo[i];
+            let depth = ai_xo_depth[i];
+            let (_, (row, column)) = ai.calculate_move_par(&board, depth);
+            board.do_move(row, column, ai.ai_shape);
             total_turns += 1;
-            let game_status = board.calculate_game_status();
-            if game_status != bitflag::STATUS_CONTESTABLE {
-                status = game_status;
-                break;
-            }
-
-            // ai move
-            //let now = std::time::Instant::now();
-            let (_, (row, column)) = ai_o.calculate_move_par(&board, depth_ai_o);
-            //let elapsed = now.elapsed();
-            //println!("o: {:.2}", elapsed.as_micros());
-            board.do_move(row, column, 2);
-            total_turns += 1;
-
-            let game_status = board.calculate_game_status();
 
             if print_game {
                 println!("\x1B[2J\x1B[1;1H");
@@ -160,24 +146,21 @@ fn ai_vs_ai(args: &mut std::env::Args) {
                 std::thread::sleep(std::time::Duration::from_millis(print_delay));
             }
 
+            let game_status = board.calculate_game_status();
             if game_status != bitflag::STATUS_CONTESTABLE {
                 status = game_status;
                 break;
             }
         }
 
-        if status == bitflag::X_PLAYER {
-            wins += 1;
-        } else if status == bitflag::STATUS_DRAW {
-            draws += 1;
-        } else if status == bitflag::O_PLAYER {
-            losses += 1;
+        match status {
+            bitflag::X_PLAYER => wins += 1,
+            bitflag::O_PLAYER => losses += 1,
+            bitflag::STATUS_DRAW => draws += 1,
+            _ => unreachable!(),
         }
 
         board.reset();
-        //println!("{board:#}");
-        //println!("Game over: result [{status}]");
-        //println!("X = {} — O = {}", bitflag::X_PLAYER, bitflag::O_PLAYER);
     }
 
     let total = wins + losses + draws;
