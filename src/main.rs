@@ -12,18 +12,21 @@ use std::io::{self, Write};
 const SYMBOL: [&str; 2] = ["\x1B[0;34mX\x1B[0m", "\x1B[0;31mO\x1B[0m"];
 const HELP_TEXT: &str =
 "
-    Usage: ut3_oxide <COMMAND>
+Usage: ut3_oxide <COMMAND>
 
-    Commands:
-      help                                Display this help message
-      pvp                                 Player versus Player mode
-      pva  <depth>                        Player versus AI mode at a given AI <depth>
-      ava  <depth_x> <depth_o> <n> <show> AI X versus AI O with a depth for each, repeated <n> times.
-                                          <show> `0` to hide or `1` display the game
-    Examples:
-      ut3_oxide pvp
-      ut3_oxide pva 7
-      ut3_oxide ava 7 7 2 1               AI X and O at depth 7 playing 2 games. Print their moves.
+Commands:
+  help                                             Display this help message.
+  pvp                                              Player versus Player mode.
+  pva  [depth=5]                                   Player versus AI mode at a given AI optional [depth].
+  ava  <depth_x> <depth_o> <n> <show> [delay=500]  AI X versus AI O with a depth for each, repeated <n> times.
+                                                   <show> `0` to hide or `1` display the game.
+                                                   [delay=500] in milliseconds between turns. Optional.
+
+Examples:
+  ut3_oxide pvp
+  ut3_oxide pva 7
+  ut3_oxide ava 7 7 2 1                        AI X and O at depth 7 playing 2 games. Print their moves.
+  ut3_oxide ava 7 7 2 900                      AI X and O at depth 7 playing 2 games. Print their moves every 900ms.
 ";
 
 fn main() {
@@ -37,9 +40,10 @@ fn main() {
 
     match cmd_name.as_str() {
         "pvp" => player_vs_player(),
-        "pva" if args.len() == 1 => player_vs_ai(&mut args),
+        "pva" => player_vs_ai(&mut args),
         "ava" => ai_vs_ai(&mut args),
-        _ => println!("{HELP_TEXT}"),
+        "help" => println!("{HELP_TEXT}"),
+        unknown => println!("Command `{unknown}` is not recognised.\n{HELP_TEXT}"),
     }
 }
 
@@ -105,12 +109,16 @@ fn ai_vs_ai(args: &mut std::env::Args) {
         .collect::<Vec<u8>>()[..]
     else {
         eprintln!("Expected 4 arguments found {}.", args.len());
-        eprintln!("Expected format: ./ut3_oxide <depth_x> <depth_o> <n> <show>");
+        eprintln!("Expected format: ./ut3_oxide <depth_x> <depth_o> <n> <show> [delay]");
         eprintln!("Try `./ut3_oxide 5 5 10 1` ");
         return;
     };
 
     let print_game = print_game != 0;
+    let print_delay = match args.next() {
+        Some(n) => n.parse().unwrap_or(500),
+        None => 500,
+    };
 
     let ai_x = AI::new(bitflag::X_PLAYER);
     let ai_o = AI::new(bitflag::O_PLAYER);
@@ -149,7 +157,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
                 println!("\x1B[2J\x1B[1;1H");
                 println!("{board:#}");
                 _ = std::io::stdout().flush();
-                std::thread::sleep(std::time::Duration::from_millis(500));
+                std::thread::sleep(std::time::Duration::from_millis(print_delay));
             }
 
             if game_status != bitflag::STATUS_CONTESTABLE {
@@ -189,7 +197,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
 fn player_vs_ai(args: &mut std::env::Args) {
     let depth = match args.next() {
         Some(d) => d.parse().unwrap_or(5),
-        _ => unreachable!(),
+        None => 5,
     };
 
     let ai_o = AI::new(bitflag::O_PLAYER);
