@@ -10,15 +10,36 @@ use board::{Board, bitflag, move_tracker::TrackedBoard};
 use std::io::{self, Write};
 
 const SYMBOL: [&str; 2] = ["\x1B[0;34mX\x1B[0m", "\x1B[0;31mO\x1B[0m"];
+const HELP_TEXT: &str =
+"
+    Usage: ut3_oxide <COMMAND>
+
+    Commands:
+      help                                Display this help message
+      pvp                                 Player versus Player mode
+      pva  <depth>                        Player versus AI mode at a given AI <depth>
+      ava  <depth_x> <depth_o> <n> <show> AI X versus AI O with a depth for each, repeated <n> times.
+                                          <show> `0` to hide or `1` display the game
+    Examples:
+      ut3_oxide pvp
+      ut3_oxide pva 7
+      ut3_oxide ava 7 7 2 1               AI X and O at depth 7 playing 2 games. Print their moves.
+";
 
 fn main() {
     let mut args = std::env::args();
     _ = args.next(); // program name
 
-    match args.len() {
-        0 => player_vs_player(),
-        1 => player_vs_ai(&mut args),
-        _ => ai_vs_ai(&mut args), // It deals with any number of arguments
+    let Some(cmd_name) = args.next() else {
+        println!("{HELP_TEXT}");
+        return;
+    };
+
+    match cmd_name.as_str() {
+        "pvp" => player_vs_player(),
+        "pva" if args.len() == 1 => player_vs_ai(&mut args),
+        "ava" => ai_vs_ai(&mut args),
+        _ => println!("{HELP_TEXT}"),
     }
 }
 
@@ -78,19 +99,18 @@ fn player_vs_player() {
 
 fn ai_vs_ai(args: &mut std::env::Args) {
     let mut board = Board::new();
-
-    let args_len = args.len();
-
-    let [depth_ai_x, depth_ai_o, iterations, ..]: [u8] = args
-        .take(3)
+    let [depth_ai_x, depth_ai_o, iterations, print_game, ..]: [u8] = args
+        .take(4)
         .filter_map(|arg| arg.parse().ok())
         .collect::<Vec<u8>>()[..]
     else {
-        eprintln!("Expected 3 arguments found {args_len}.");
-        eprintln!("Expected format: ./ut3_oxide <depth for ai_x> <depth for ai_o> <iterations>");
-        eprintln!("Try `./ut3_oxide 5 5 10` ");
+        eprintln!("Expected 4 arguments found {}.", args.len());
+        eprintln!("Expected format: ./ut3_oxide <depth_x> <depth_o> <n> <show>");
+        eprintln!("Try `./ut3_oxide 5 5 10 1` ");
         return;
     };
+
+    let print_game = print_game != 0;
 
     let ai_x = AI::new(bitflag::X_PLAYER);
     let ai_o = AI::new(bitflag::O_PLAYER);
@@ -125,10 +145,12 @@ fn ai_vs_ai(args: &mut std::env::Args) {
 
             let game_status = board.calculate_game_status();
 
-            // println!("\x1B[2J\x1B[1;1H");
-            // println!("{board:#}");
-            // _ = std::io::stdout().flush();
-            // std::thread::sleep(std::time::Duration::from_millis(750));
+            if print_game {
+                println!("\x1B[2J\x1B[1;1H");
+                println!("{board:#}");
+                _ = std::io::stdout().flush();
+                std::thread::sleep(std::time::Duration::from_millis(500));
+            }
 
             if game_status != bitflag::STATUS_CONTESTABLE {
                 status = game_status;
