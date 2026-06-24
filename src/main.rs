@@ -178,9 +178,13 @@ fn player_vs_ai(args: &mut std::env::Args) {
     let mut is_player_turn = true;
     let mut ai_messages = String::with_capacity(760);
     let mut ai_eval_buffer = String::with_capacity(40);
+    let ai_x_hinter = AI::new(bitflag::X_PLAYER);
 
     print!("\x1B[2J\x1B[1;1H");
-    println!("Welcome! You may (u)ndo, (r)eset or (q)uit any time.");
+    println!("Welcome! You may get a (h)int, (u)ndo, (r)eset or (q)uit any time.");
+    println!(
+        "Enter a move as \"\x1b[31mrow\x1b[0m\x1b[34mcol\x1b[0m\" like \"\x1b[31m4\x1b[0m\x1b[34m3\x1b[0m\""
+    );
     println!("{:#}", tracked.board);
 
     loop {
@@ -189,14 +193,22 @@ fn player_vs_ai(args: &mut std::env::Args) {
                 ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, true)
                 && tracked.board.is_valid_move(row, column)
             {
-                // TOOD (h)int
                 tracked.do_move(row, column, bitflag::X_PLAYER);
             } else {
                 print!("\x1B[2J\x1B[1;1H");
                 println!("{:#}", tracked.board);
 
-                if !matches!(input_buffer.trim(), "u" | "r") {
-                    println!("\x1b[41m invalid! \x1b[0m");
+                // If the input isn't a move and doesn't match any str commands, it's invalid.
+                if !match input_buffer.trim() {
+                    "u" | "r" => true,
+                    "h" if !is_game_over => {
+                        let (_, mov) = ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
+                        println!("How about {mov:?}?");
+                        true
+                    }
+                    _ => false,
+                } {
+                    println!("\x1b[41m Invalid! \x1b[0m");
                 }
 
                 continue;
@@ -234,7 +246,7 @@ fn player_vs_ai(args: &mut std::env::Args) {
         ai_messages.clear();
 
         let game_status = tracked.board.calculate_game_status();
-        if game_status != bitflag::STATUS_CONTESTABLE || is_game_over {
+        if game_status != bitflag::STATUS_CONTESTABLE {
             is_game_over = true;
             _ = io::stdout().flush();
             match game_status {
@@ -266,7 +278,7 @@ fn ask_move(
     if *is_game_over {
         print!("Game over! (u)ndo, (r)eset, (q)uit? ");
     } else {
-        print!("Enter a move as \"rowcol\" like \"43\": ");
+        print!("Enter a move: ");
     }
     _ = io::stdout().flush();
 
