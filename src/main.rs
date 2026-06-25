@@ -112,7 +112,7 @@ fn tutorial() {
         what happens when you are sent to a won/full miniboard"
     );
 
-    print!("\nWould you like to jump into a game versus a bot and practice? (Y/n) ");
+    print!("\nWould you like to jump into a game versus a bot and practice? [Y/n] ");
     _ = io::stdout().flush();
     _ = io::stdin().read_line(&mut buffer);
 
@@ -261,7 +261,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
         "wr @ depth {depth_ai_x} X: {wrx:.2}% ({wins}/{total})\nwr @ depth {depth_ai_o} O: {wro:.2}% ({losses}/{total})
         — total games: {total}
         — average total turns: {average_turns:.2} of total {total_turns}
-        — draws: {drawrate:.2}% ({draws}/{total}),"
+        — draws: {drawrate:.2}% ({draws}/{total})"
     );
 }
 

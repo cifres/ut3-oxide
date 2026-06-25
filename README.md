@@ -2,56 +2,58 @@
 
 *you·tee·three ox·ide*
 
-A performant command-line program to play *Ultimate* Tic Tac Toe featuring
-Alpha-Beta pruning AI, and local multiplayer for the game.
+A performant command-line program to play *Ultimate* Tic Tac Toe featuring an
+Alpha-Beta pruning AI, and local multiplayer.
+
+![Sample gameplay of Player vs. AI](assets/extended.gif)
 
 ## Description
 
-UT3 Oxide is a command-line program in Rust for playing the Ultimate Tic Tac Toe
-(UT3) game against a bot or another player locally. The AI is algorithmic
-and uses Minimax with [Alpha-Beta
-pruning](https://en.wikipedia.org/wiki/Alpha-beta_pruning) (α-β). The
-engine representation utilises bitfields, bitpacking, and bitwise
-operations for efficient storage, cache utilisation, and improved
+UT3 Oxide is a command-line program in Rust for playing the Ultimate Tic Tac
+Toe (UT3) against a bot or with another player locally. The AI uses Minimax
+with [Alpha-Beta pruning](https://en.wikipedia.org/wiki/Alpha-beta_pruning)
+(α-β). The engine uses bitpacking, bitwise operations, and domain-specific
+optimisations for efficient storage, cache utilisation, and improved
 performance.
-
-Gif here of gameplay
 
 ## Motivation
 
-* Bullet points
+UT3 Oxide is built to improve upon the
+[TypeScript](https://github.com/cifres/AI-UTTT-V2)
+prototype [playable here](https://utttai.netlify.app/) by having:
 
-I wanted to practice, and play with my friends offline, however alternatives
-required an internet connection. So after I first built the game in
-[TypeScript](https://github.com/cifres/AI-UTTT-V2) to prototype the concept
-([playable here](utttai.netlify.app/)), I
-wanted to make it performant and accessible offline, so I developed UT3 Oxide.
-Finally, it was a fantastic opportunity to deepen my understanding of bitpacking
-and bitwise operations in a performance context.
+- Offline play:
+  - With friends via local multiplayer
+  - Against a bot with varying levels of difficulty
+  - AI versus AI
+- Substantial performance improvements (1000x)
+
+Additionally, the project enabled deepening my understanding of binary and
+bitwise operations in a performance context
 
 ## Quick Start
 
-The easiest way to try out the game is to download a pre-compiled binary for
-your system, then running the following:
+To try it out, download a pre-compiled binary for
+your system from the [releases](releases), then run the following in a terminal:
 
 ```bash
-./ut3_oxide
+./ut3_oxide pva
 ```
 
 ## Building
 
 > [!NOTE]
-> [Rust](https://rust-lang.org/tools/install) and [Git](https://git-scm.com/install) must be installed and on `path`.
+> [Rust](https://rust-lang.org/tools/install) must be installed and on `path`.
+> [Git](https://git-scm.com/install) is standard, but you can
+> [download](releases) the source code manually.
 
 ```bash
-# Clone 
+# Clone or manually download from the releases
 git clone github.com/cifres/ut3-oxide
-```
 
-```bash
-# Change directory, build and run
-cd ut3_oxide
-cargo run --release
+# Change directory and build
+cd ut3-oxide
+cargo build
 ```
 
 ### Benching
@@ -62,27 +64,82 @@ cargo bench --profile release
 
 ## Usage
 
-### Player versus AI
+### Summary
 
-Play versus the AI at a search depth of `9`:
+| Command | Meaning | Notes |
+| --------------- | --------------- | ----- |
+| `tutorial` | Guided interactive exploration of rules |  Follow the tutorial then optionally play a practice match |
+| `pvp`      | Player vs. Player                       | `(u)ndo`, `(r)eset`, `(q)uit` available                    |
+| `pva`      | Player vs. AI                           | `(h)int`, `(u)ndo`, `(r)eset`, `(q)uit` available          |
+| `ava`      | AI vs. AI                               | Will report the results at the end                         |
+| `help`     | Print the help message                  | Provides example usage of each command                     |
+
+### Examples
 
 ```bash
-# ./ut3_oxide [depth]
-./ut3_oxide 9
+# ./ut3_oxide pva [depth=5]
+./ut3_oxide pva
+./ut3_oxide pva 8
 ```
 
-### AI versus AI
+Alternatively, you may pit two AIs against each other at specified search
+depths. Both AIs look 5 moves ahead per turn, play 100 games total, and
+report the results:
 
-Alternatively, you may pit two AIs against each other at specified search depths. Here the both AIs run search at an equal depth and play 10 games total.
+> [!NOTE]
+> Delay is in milliseconds but will only be used if `show` is `1`.
 
 ```bash
-# ./ut3_oxide [depth_ai_x] [depth_ai_o] [repetitions]
-./ut3_oxide 7 7 10
+# ./ut3_oxide <depth_ai_x> <depth_ai_o> <repetitions> [show=0] [delay=500]
+$ ./ut3_oxide ava 5 5 100
+wr @ depth 5 X: 53.00% (53/100)
+wr @ depth 5 O: 39.00% (39/100)
+        — total games: 100
+        — average total turns: 52.50 of total 5250
+        — draws: 8.00% (8/100)
 ```
 
-## Rules && How to Play
+To watch them play move-by-move for 1 game, waiting 1 second between turns:
 
-## Acknowledgements
+```bash
+./ut3_oxide ava 7 7 10 1 1000
+```
 
-AlphaZero Variant -- comment
-Zurich lady uttt
+![Sample gameplay of AI vs. AI](assets/ava.gif)
+
+## How to Play
+
+The tutorial is a great place to practically understand the rules but here is
+an overview:
+
+```bash
+./ut3_oxide tutorial
+```
+
+As with regular '[Tic Tac Toe](https://en.wikipedia.org/wiki/Tic-tac-toe)'[^1],
+the goal is to win by making a 3-in-a-line. However, UT3 diverges with two key
+elements:
+
+1. Expanding the board from *3x3* to *9x9* thereby netting 81 squares and 9
+   *miniboards*.
+
+1. Miniboard-move sending: the previous move dictates which *miniboard* the
+   next move can be played in. For example, playing in the *top-centre* cell of
+any miniboard sends the opponent to the *top-centre* miniboard, thus *forcing*
+the next move to be played there. *However*, if that *miniboard*
+cannot be played in, because a player has won it or it's full, then they are
+permitted to play in any other *valid* [^2] *miniboard*. Thus, in a sense, you
+win by coercing your opponent into letting you win.
+
+## Future Work
+
+Future work may comprise of the following enhancements:
+
+- Online multiplayer
+- UI upgrade
+- Clearer user feedback:
+  - SFX and VFX for moves, miniboard wins
+
+[^1]: Sometimes localised as 'Noughts and Crosses' or 'Xs and Os'.
+[^2]: A *miniboard* that is not full nor has neither player won; a
+    *contestable*  miniboard.
