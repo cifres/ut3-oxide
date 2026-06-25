@@ -1,6 +1,6 @@
 #![warn(clippy::pedantic)]
 
-// TODO: (h)int, tutorial?
+//TODO: tutorial?
 
 mod ai;
 mod board;
@@ -15,18 +15,19 @@ const HELP_TEXT: &str =
 Usage: ut3_oxide <COMMAND>
 
 Commands:
-  help                                             Display this help message.
-  pvp                                              Player versus Player mode.
-  pva  [depth=5]                                   Player versus AI mode at a given AI optional [depth].
-  ava  <depth_x> <depth_o> <n> <show> [delay=500]  AI X versus AI O with a depth for each, repeated <n> times.
-                                                   <show> `0` to hide or `1` display the game.
-                                                   [delay=500] in milliseconds between turns. Optional.
+  help                                               Display this help message
+  pvp                                                Player versus Player mode
+  pva  [depth=5]                                     Player versus AI mode at a given AI optional [depth]
+  ava  <depth_x> <depth_o> <n> [show=0] [delay=500]  AI X versus AI O with a depth for each, repeated <n> times
+                                                     [show] `0` to hide or `1` display the game -- optional
+                                                     [delay=500] in milliseconds between turns -- optional
 
 Examples:
-  ut3_oxide pvp
-  ut3_oxide pva 7
-  ut3_oxide ava 7 7 2 1                        AI X and O at depth 7 playing 2 games. Print their moves.
-  ut3_oxide ava 7 7 2 900                      AI X and O at depth 7 playing 2 games. Print their moves every 900ms.
+  ut3_oxide pvp                                      Player versus Player
+  ut3_oxide pva 9                                    Player versus AI at depth 9
+  ut3_oxide ava 5 5 10                               AI X versus AI O at depth 5 playing 10 games
+  ut3_oxide ava 7 7 1 1                              AI X versus AI O at depth 7 playing 1 game, print their moves
+  ut3_oxide ava 7 7 2 1 900                          AI X versus AI O at depth 7 playing 1 game, print their moves every 900ms
 ";
 
 fn main() {
@@ -47,6 +48,18 @@ fn main() {
     }
 }
 
+/// Function to assist players in understanding the concept of the game
+/// Build on understanding step-by-step
+/// Finish with optional match vs depth 3 AI 
+/// 1. 3-in-a-line in miniboard
+/// 2. Move-Miniboard sending
+/// 3. 3-in-a-line main board
+///
+/// Use ask move but retry on not following tutorial move sequence
+fn tutorial() {
+    todo!()
+}
+
 fn player_vs_player() {
     let mut turn: u8 = 0;
     let mut is_game_over = false;
@@ -54,6 +67,7 @@ fn player_vs_player() {
     let mut input_buffer = String::with_capacity(2);
 
     print!("\x1B[2J\x1B[1;1H");
+    println!("Welcome! You may (u)ndo, (r)eset or (q)uit any time.");
     println!("{:#}", tracked.board);
 
     loop {
@@ -103,18 +117,23 @@ fn player_vs_player() {
 
 fn ai_vs_ai(args: &mut std::env::Args) {
     let mut board = Board::new();
-    let [depth_ai_x, depth_ai_o, iterations, print_game, ..]: [u8] = args
-        .take(4)
+    let len = args.len();
+    let [depth_ai_x, depth_ai_o, iterations, ..]: [u8] = args
+        .take(3)
         .filter_map(|arg| arg.parse().ok())
         .collect::<Vec<u8>>()[..]
     else {
-        eprintln!("Expected 4 arguments found {}.", args.len());
-        eprintln!("Expected format: ./ut3_oxide <depth_x> <depth_o> <n> <show> [delay]");
-        eprintln!("Try `./ut3_oxide 5 5 10 1` ");
+        eprintln!("Expected 3 arguments found {len}.");
+        eprintln!("Expected format: ./ut3_oxide <depth_x> <depth_o> <n> [show] [delay]");
+        eprintln!("Try `./ut3_oxide 5 5 10` ");
         return;
     };
 
-    let print_game = print_game != 0;
+    let print_game = match args.next() {
+        Some(to_show) => to_show.parse().unwrap_or(0) != 0,
+        None => false,
+    };
+
     let print_delay = match args.next() {
         Some(n) => n.parse().unwrap_or(500),
         None => 500,
