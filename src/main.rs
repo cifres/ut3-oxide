@@ -1,7 +1,5 @@
 #![warn(clippy::pedantic)]
 
-//TODO: tutorial?
-
 mod ai;
 mod board;
 
@@ -16,6 +14,7 @@ Usage: ut3_oxide <COMMAND>
 
 Commands:
   help                                               Display this help message
+  tutorial                                           Tutorial mode for beginners to learn the rules
   pvp                                                Player versus Player mode
   pva  [depth=5]                                     Player versus AI mode at a given AI optional [depth]
   ava  <depth_x> <depth_o> <n> [show=0] [delay=500]  AI X versus AI O with a depth for each, repeated <n> times
@@ -43,21 +42,114 @@ fn main() {
         "pvp" => player_vs_player(),
         "pva" => player_vs_ai(&mut args),
         "ava" => ai_vs_ai(&mut args),
+        "tutorial" => tutorial(),
         "help" => println!("{HELP_TEXT}"),
         unknown => println!("Command `{unknown}` is not recognised.\n{HELP_TEXT}"),
     }
 }
 
-/// Function to assist players in understanding the concept of the game
-/// Build on understanding step-by-step
-/// Finish with optional match vs depth 3 AI 
-/// 1. 3-in-a-line in miniboard
-/// 2. Move-Miniboard sending
-/// 3. 3-in-a-line main board
-///
-/// Use ask move but retry on not following tutorial move sequence
 fn tutorial() {
-    todo!()
+    let questions: [(&str, (u8, u8), &str); 6] = [
+
+        (
+            "Welcome to the UT3 Tutorial!",
+            (0, 0),
+            ""
+        ),
+        (
+            "1. Like regular tic-tac-toe, you win by getting a three-in-a-line\nTo form a line \
+            here enter the coordinates for the \x1b[31m3rd row \x1b[34m5th column\x1b[0m like \
+            \"\x1b[31mrow\x1b[0m\x1b[34mcol\x1b[0m\"",
+            (3, 5),
+            "Try: \x1b[34m3\x1b[0m\x1b[31m5\x1b[0m",
+        ),
+        (
+            concat!("Excellent! You won a \x1b[34mminiboard\x1b[0m\n\n\
+            2. Time to understand the core mechanic!\nIn UT3, your ", uline!("move"), " sends your \
+            opponent to a corresponding ", uline!("miniboard"), " and vice versa.\nSo, the \
+            \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m ", uline!("move"), " in any ", uline!("miniboard"), " \
+            sends your opponent to the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m \
+            ", uline!("miniboard"), ".\n\n\
+            Notice how your previous ", uline!("move"), " sent your opponent \
+            to the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m ", uline!("miniboard"), ".\nThe green \
+            \x1b[1;32m_\x1b[0m's, and \x1b[32mcoordinates\x1b[0m on the sides highlight valid moves"),
+            (0, 0),
+            "",
+        ),
+
+        (
+            "3. Quiz time! Which coordinates will send your oppoent to the \
+            \x1b[34mcentre-\x1b[31mleft\x1b[0m \x1b[4mminiboard\x1b[0m?",
+            (1, 6),
+            "Hint: in the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m miniboard, look for the \
+            coordinates on the side that line up with the \x1b[34mcentre-\x1b[31mleft\x1b[0m \
+                cell",
+        ),
+        (
+            concat!("4. Time for the final rule! \x1b[31mO\x1b[0m will now play in the middle-centre \
+            cell. But, the \x1b[34mmiddle\x1b[0m-\x1b[31mcentre\x1b[0m ", uline!("miniboard"), " is \
+            won already.\nWhat do you think will happen?"),
+            (0, 0),
+            "",
+        ),
+        (
+            "Notice how you can make a move anywhere now! Remember, green \x1b[1;32m_\x1b[0m's \
+            highlight valid moves",
+            (0, 0),
+            ""
+        ),
+
+    ];
+
+    let mut tracked = TrackedBoard::new(Board::new());
+    let mut buffer = String::with_capacity(2);
+
+    // Pre tutorial setup
+    tracked.board.do_move(3, 3, bitflag::X_PLAYER);
+    tracked.board.do_move(1, 1, bitflag::O_PLAYER);
+    tracked.board.do_move(3, 4, bitflag::X_PLAYER);
+    tracked.board.do_move(1, 4, bitflag::O_PLAYER);
+
+    for (i, &(question, answer, hint)) in questions.iter().enumerate() {
+        print!("\x1B[2J\x1B[1;1H");
+        println!("{:#}", tracked.board);
+        buffer.clear();
+        println!("{question}\n");
+
+        // FIXME: error prone if question order changes
+        if i == 4 {
+            tracked.board.do_move(4, 1, bitflag::O_PLAYER);
+        }
+
+        loop {
+            // If there's no hint, this isn't a question to be answered
+            if hint.is_empty() {
+                print!("Press Enter to continue ");
+                _ = io::stdout().flush();
+                _ = io::stdin().read_line(&mut buffer);
+                break;
+            }
+
+            if let Some((row, col)) = ask_move(&mut tracked, &mut buffer, &mut false, true)
+                && (row, col) == answer
+            {
+                tracked.board.do_move(row, col, bitflag::X_PLAYER);
+                break;
+            }
+
+            print!("\x1B[2J\x1B[1;1H");
+            println!("{:#}", tracked.board);
+            println!("{question}\n");
+            println!("{hint}");
+        }
+    };
+
+    print!("\x1B[2J\x1B[1;1H");
+    println!("{:#}", tracked.board);
+    println!(
+        "Congratulations on completing the tutorial!\nYou've learned how to win a miniboard and \
+        what happens when you are sent to a won/full miniboard"
+    );
 }
 
 fn player_vs_player() {
