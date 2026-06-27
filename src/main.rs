@@ -29,6 +29,7 @@ Examples:
   ut3_oxide ava 7 7 2 1 900                          AI X versus AI O at depth 7 playing 1 game, print their moves every 900ms
 ";
 
+// TODO:
 fn main() {
     let mut args = std::env::args();
     _ = args.next(); // program name
@@ -40,7 +41,14 @@ fn main() {
 
     match cmd_name.as_str() {
         "pvp" => player_vs_player(),
-        "pva" => player_vs_ai(&mut args),
+        "pva" => {
+            let depth = match args.next() {
+                Some(d) => d.parse().unwrap_or(5),
+                None => 5,
+            };
+
+            player_vs_ai(depth);
+        },
         "ava" => ai_vs_ai(&mut args),
         "tutorial" => tutorial(),
         "help" => println!("{HELP_TEXT}"),
@@ -50,18 +58,13 @@ fn main() {
 
 fn tutorial() {
     let questions: [(&str, (u8, u8), &str); 6] = [
-
-        (
-            "Welcome to the UT3 Tutorial!",
-            (0, 0),
-            ""
-        ),
+        ("Welcome to the UT3 Tutorial!", (0, 0), ""),
         (
             "1. Like regular tic-tac-toe, you win by getting a three-in-a-line\nTo form a line \
             here enter the coordinates for the \x1b[31m3rd row \x1b[34m5th column\x1b[0m like \
             \"\x1b[31mrow\x1b[0m\x1b[34mcol\x1b[0m\"",
             (3, 5),
-            "Try: \x1b[34m3\x1b[0m\x1b[31m5\x1b[0m",
+            "\x1b[3mHint\x1b[0m: try 35",
         ),
         (
             concat!("Excellent! You won a \x1b[34mminiboard\x1b[0m\n\n\
@@ -81,7 +84,7 @@ fn tutorial() {
             "3. Quiz time! Which coordinates will send your oppoent to the \
             \x1b[34mcentre-\x1b[31mleft\x1b[0m \x1b[4mminiboard\x1b[0m?",
             (1, 6),
-            "Hint: in the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m miniboard, look for the \
+            "\x1b[3mHint\x1b[0m: in the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m miniboard, look for the \
             coordinates on the side that line up with the \x1b[34mcentre-\x1b[31mleft\x1b[0m \
                 cell",
         ),
@@ -140,7 +143,7 @@ fn tutorial() {
             print!("\x1B[2J\x1B[1;1H");
             println!("{:#}", tracked.board);
             println!("{question}\n");
-            println!("{hint}");
+            println!("\x1b[3m{hint}\x1b[0m");
         }
     };
 
@@ -150,6 +153,17 @@ fn tutorial() {
         "Congratulations on completing the tutorial!\nYou've learned how to win a miniboard and \
         what happens when you are sent to a won/full miniboard"
     );
+
+    print!("\nWould you like to jump into a game versus a bot and practice? (Y/n) ");
+    _ = io::stdout().flush();
+    _ = io::stdin().read_line(&mut buffer);
+
+    match buffer.trim() {
+        "n" => (),
+        _ => player_vs_ai(3),
+    }
+
+    println!("Thank you for playing!");
 }
 
 fn player_vs_player() {
@@ -288,12 +302,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
     );
 }
 
-fn player_vs_ai(args: &mut std::env::Args) {
-    let depth = match args.next() {
-        Some(d) => d.parse().unwrap_or(5),
-        None => 5,
-    };
-
+fn player_vs_ai(depth: u8) {
     let ai_o = AI::new(bitflag::O_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
     let mut is_game_over = false;
@@ -312,7 +321,7 @@ fn player_vs_ai(args: &mut std::env::Args) {
     println!("{:#}", tracked.board);
 
     loop {
-        if is_player_turn {
+        if is_player_turn || is_game_over {
             if let Some((row, column)) =
                 ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, true)
                 && tracked.board.is_valid_move(row, column)
@@ -322,12 +331,22 @@ fn player_vs_ai(args: &mut std::env::Args) {
                 print!("\x1B[2J\x1B[1;1H");
                 println!("{:#}", tracked.board);
 
-                // If the input isn't a move and doesn't match any str commands, it's invalid.
+                // it's not 'hd' it's the player winning the last move and undoing twice back to
+                // themselves, skipping the AI's turn.
                 if !match input_buffer.trim() {
                     "u" | "r" => true,
                     "h" if !is_game_over => {
                         let (_, mov) = ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
                         println!("How about {mov:?}?");
+                        true
+                    },
+                    "hd" if !is_game_over => {
+                        // undoing desyncs bc if ai does the last move we undo twice back to the ai and>
+                        // hd is the issue
+                        // because we weren't tracking the move
+                        let (_, (row, col)) = ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
+                        tracked.do_move(row, col, bitflag::X_PLAYER);
+                        is_player_turn = false;
                         true
                     }
                     _ => false,
@@ -417,9 +436,13 @@ fn ask_move(
     if input == "u" {
         *is_game_over = false;
         // undo twice for the Player versus AI
-        println!("Move undone!");
+        // unless the player made the last move and won the game. then undo once.
+        // get last move, get cell, cmp player piece 
+        let (row, col)  = tracked.board.last_move;
+        let lst_cell = tracked.board.get_cell(row, col);
+
         tracked.undo_move();
-        if is_p_v_ai {
+        if is_p_v_ai && lst_cell != bitflag::X_PLAYER {
             tracked.undo_move();
         }
 
