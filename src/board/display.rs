@@ -3,7 +3,9 @@ use std::fmt::{self};
 
 #[macro_export]
 macro_rules! uline {
-    ($s:literal) => { concat!("\x1b[4m", $s, "\x1b[0m") };
+    ($s:literal) => {
+        concat!("\x1b[4m", $s, "\x1b[0m")
+    };
 }
 
 impl Board {
@@ -25,7 +27,6 @@ impl Board {
         }
         println!();
     }
-
 }
 
 impl fmt::Display for Board {
@@ -37,8 +38,12 @@ impl fmt::Display for Board {
 
             // Crudely colour coordinate if it has a valid cell
             // TODO: Valid moves iter -> add to [rows] [cols] separate vec
-            let valid_cols = (0..9).map(|c| self.valid_moves().any(|vc| vc.1 == c)).collect::<Vec<bool>>();
-            let valid_rows = (0..9).map(|c| self.valid_moves().any(|vr| vr.0 == c)).collect::<Vec<bool>>();
+            let valid_cols = (0..9)
+                .map(|c| self.valid_moves().any(|vc| vc.1 == c))
+                .collect::<Vec<bool>>();
+            let valid_rows = (0..9)
+                .map(|c| self.valid_moves().any(|vr| vr.0 == c))
+                .collect::<Vec<bool>>();
 
             let col_string = "    0 1 2   3 4 5   6 7 8  ";
             for c in col_string.split("") {
@@ -81,8 +86,8 @@ impl fmt::Display for Board {
                         (1, 2) => "\x08 \x08\x1b[41m X \x1b[0m",
                         (2, 2) => "\x08 \x08\x1b[41m O \x1b[0m",
                         (0, _) => "─ ",
-                        (1, _) => "\x1b[0;34mX \x1b[0m",
-                        (2, _) => "\x1b[0;31mO \x1b[0m",
+                        (1, _) => "\x1b[34mX \x1b[0m",
+                        (2, _) => "\x1b[31mO \x1b[0m",
                         _ => unreachable!(),
                     };
 

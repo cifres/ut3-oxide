@@ -177,7 +177,9 @@ fn player_vs_player() {
     println!("{:#}", tracked.board);
 
     loop {
-        println!("{}'s turn", SYMBOL[usize::from(turn % 2)]);
+        if !is_game_over {
+            println!("{}'s turn", SYMBOL[usize::from(turn % 2)]);
+        }
 
         if let Some((row, column)) =
             ask_move(&mut tracked, &mut input_buffer, &mut is_game_over, false)
@@ -331,33 +333,32 @@ fn player_vs_ai(depth: u8) {
                 print!("\x1B[2J\x1B[1;1H");
                 println!("{:#}", tracked.board);
 
-                // it's not 'hd' it's the player winning the last move and undoing twice back to
-                // themselves, skipping the AI's turn.
-                if !match input_buffer.trim() {
-                    "u" | "r" => true,
+                match input_buffer.trim() {
+                    "u" | "r" => {
+                        // Undoing sets the is_game_over to false. This ensures that if the player
+                        // made the winning move, even though it becomes the AI's turn technically
+                        // thereafter, undoing will yield control back to the player rather than the
+                        // AI sneaking a move in.
+                        is_player_turn = true;
+                        continue;
+                    },
                     "h" if !is_game_over => {
                         let (_, mov) = ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
                         println!("How about {mov:?}?");
-                        true
+                        continue;
                     },
                     "hd" if !is_game_over => {
-                        // undoing desyncs bc if ai does the last move we undo twice back to the ai and>
-                        // hd is the issue
-                        // because we weren't tracking the move
-                        let (_, (row, col)) = ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
+                        let (_, (row, col)) =
+                            ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
                         tracked.do_move(row, col, bitflag::X_PLAYER);
-                        is_player_turn = false;
-                        true
                     }
-                    _ => false,
-                } {
-                    println!("\x1b[41m Invalid! \x1b[0m");
+                    _ => {
+                        println!("\x1b[41m Invalid! \x1b[0m");
+                        continue;
+                    },
                 }
-
-                continue;
             }
         } else {
-            // ai move
             let now = std::time::Instant::now();
             let (eval, (row, column)) = ai_o.calculate_move_par(&tracked.board, depth);
             let elapsed = now.elapsed();
