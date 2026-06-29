@@ -1,12 +1,5 @@
-use super::{Board, iterator::MiniboardStatusesIterator};
-use std::fmt::{self};
-
-#[macro_export]
-macro_rules! uline {
-    ($s:literal) => {
-        concat!("\x1b[4m", $s, "\x1b[0m")
-    };
-}
+use super::Board;
+use std::fmt::{self, Write};
 
 impl Board {
     /// Create a mask where there are only 1s over the `18` bits for the u32 row
@@ -16,16 +9,46 @@ impl Board {
         self.main_board[row as usize] & mask
     }
 
-    #[allow(dead_code)]
-    pub fn display_mb_statuses(&self) {
-        for (i, mb) in MiniboardStatusesIterator::new(self.get_miniboard_statuses()).enumerate() {
-            if i % 3 == 0 {
-                println!();
-                print!("|");
+    pub fn display_mb_names() {
+        let word_rows = ["top", "centre", "bottom"];
+        let word_cols = ["left", "middle", "right"];
+        let line = "─";
+        println!("┌{}┐", line.repeat(47));
+        for (i, &wr) in word_rows.iter().enumerate() {
+            let mut l_buffer = String::with_capacity(60);
+            let mut div_buffer = String::with_capacity(60);
+
+            for (j, &wc) in word_cols.iter().enumerate() {
+                let s = format!(" \x1b[34m{wr:>6}\x1b[0m-\x1b[31m{wc:<6}\x1b[0m │");
+
+                l_buffer.push_str(&s);
+                let div_char = match (i, j) {
+                    (2, 2) => "┘",
+                    (2, _) => "┴",
+                    (_, 2) => "┤",
+                    _ => "┼",
+                };
+
+                // escape code pairs like \x1b[34m \x1b[0m equal 9 chars
+                // * 2 = 18 + 1 for offset
+                _ = write!(
+                    div_buffer,
+                    "{}{div_char}",
+                    &line.repeat(s.chars().count() - 19)
+                );
             }
-            print!(" {mb} |");
+
+            let div_char_start = match i {
+                0 | 1 => "├",
+                2 => "└",
+                _ => unreachable!(),
+            };
+            println!("│{l_buffer}");
+            println!("{div_char_start}{div_buffer}");
+
+            div_buffer.clear();
+            l_buffer.clear();
         }
-        println!();
     }
 }
 
