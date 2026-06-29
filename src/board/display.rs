@@ -30,7 +30,7 @@ impl Board {
                 };
 
                 // escape code pairs like \x1b[34m \x1b[0m equal 9 chars
-                // * 2 = 18 + 1 for offset
+                // 9 * 2 = 18, + 1 for offset
                 _ = write!(
                     div_buffer,
                     "{}{div_char}",
