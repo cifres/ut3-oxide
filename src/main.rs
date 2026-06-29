@@ -2,9 +2,11 @@
 
 mod ai;
 mod board;
+mod questions;
 
 use ai::AI;
 use board::{Board, bitflag, move_tracker::TrackedBoard};
+use questions::QUESTIONS;
 use std::io::{self, Write};
 
 const SYMBOL: [&str; 2] = ["\x1B[0;34mX\x1B[0m", "\x1B[0;31mO\x1B[0m"];
@@ -29,7 +31,6 @@ Examples:
   ut3_oxide ava 7 7 2 1 900                          AI X versus AI O at depth 7 playing 1 game, print their moves every 900ms
 ";
 
-// TODO:
 fn main() {
     let mut args = std::env::args();
     _ = args.next(); // program name
@@ -48,7 +49,7 @@ fn main() {
             };
 
             player_vs_ai(depth);
-        },
+        }
         "ava" => ai_vs_ai(&mut args),
         "tutorial" => tutorial(),
         "help" => println!("{HELP_TEXT}"),
@@ -57,53 +58,6 @@ fn main() {
 }
 
 fn tutorial() {
-    let questions: [(&str, (u8, u8), &str); 6] = [
-        ("Welcome to the UT3 Tutorial!", (0, 0), ""),
-        (
-            "1. Like regular tic-tac-toe, you win by getting a three-in-a-line\nTo form a line \
-            here enter the coordinates for the \x1b[31m3rd row \x1b[34m5th column\x1b[0m like \
-            \"\x1b[31mrow\x1b[0m\x1b[34mcol\x1b[0m\"",
-            (3, 5),
-            "\x1b[3mHint\x1b[0m: try 35",
-        ),
-        (
-            concat!("Excellent! You won a \x1b[34mminiboard\x1b[0m\n\n\
-            2. Time to understand the core mechanic!\nIn UT3, your ", uline!("move"), " sends your \
-            opponent to a corresponding ", uline!("miniboard"), " and vice versa.\nSo, the \
-            \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m ", uline!("move"), " in any ", uline!("miniboard"), " \
-            sends your opponent to the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m \
-            ", uline!("miniboard"), ".\n\n\
-            Notice how your previous ", uline!("move"), " sent your opponent \
-            to the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m ", uline!("miniboard"), ".\nThe green \
-            \x1b[1;32m_\x1b[0m's, and \x1b[32mcoordinates\x1b[0m on the sides highlight valid moves"),
-            (0, 0),
-            "",
-        ),
-
-        (
-            "3. Quiz time! Which coordinates will send your oppoent to the \
-            \x1b[34mcentre-\x1b[31mleft\x1b[0m \x1b[4mminiboard\x1b[0m?",
-            (1, 6),
-            "\x1b[3mHint\x1b[0m: in the \x1b[34mtop\x1b[0m-\x1b[31mright\x1b[0m miniboard, look for the \
-            coordinates on the side that line up with the \x1b[34mcentre-\x1b[31mleft\x1b[0m \
-                cell",
-        ),
-        (
-            concat!("4. Time for the final rule! \x1b[31mO\x1b[0m will now play in the middle-centre \
-            cell. But, the \x1b[34mmiddle\x1b[0m-\x1b[31mcentre\x1b[0m ", uline!("miniboard"), " is \
-            won already.\nWhat do you think will happen?"),
-            (0, 0),
-            "",
-        ),
-        (
-            "Notice how you can make a move anywhere now! Remember, green \x1b[1;32m_\x1b[0m's \
-            highlight valid moves",
-            (0, 0),
-            ""
-        ),
-
-    ];
-
     let mut tracked = TrackedBoard::new(Board::new());
     let mut buffer = String::with_capacity(2);
 
@@ -113,14 +67,18 @@ fn tutorial() {
     tracked.board.do_move(3, 4, bitflag::X_PLAYER);
     tracked.board.do_move(1, 4, bitflag::O_PLAYER);
 
-    for (i, &(question, answer, hint)) in questions.iter().enumerate() {
+    for (i, &(question, answer, hint)) in QUESTIONS.iter().enumerate() {
         print!("\x1B[2J\x1B[1;1H");
         println!("{:#}", tracked.board);
         buffer.clear();
         println!("{question}\n");
 
         // FIXME: error prone if question order changes
-        if i == 4 {
+        if i == 3 {
+            println!("The following tables may help you:\n");
+            board::Board::display_mb_names();
+            println!();
+        } else if i == 4 {
             tracked.board.do_move(4, 1, bitflag::O_PLAYER);
         }
 
@@ -145,7 +103,7 @@ fn tutorial() {
             println!("{question}\n");
             println!("\x1b[3m{hint}\x1b[0m");
         }
-    };
+    }
 
     print!("\x1B[2J\x1B[1;1H");
     println!("{:#}", tracked.board);
@@ -174,6 +132,9 @@ fn player_vs_player() {
 
     print!("\x1B[2J\x1B[1;1H");
     println!("Welcome! You may (u)ndo, (r)eset or (q)uit any time.");
+    println!(
+        "Enter a move as \"\x1b[34mrow\x1b[0m\x1b[31mcol\x1b[0m\" like \"\x1b[34m4\x1b[0m\x1b[31m3\x1b[0m\""
+    );
     println!("{:#}", tracked.board);
 
     loop {
@@ -318,7 +279,7 @@ fn player_vs_ai(depth: u8) {
     print!("\x1B[2J\x1B[1;1H");
     println!("Welcome! You may get a (h)int, (u)ndo, (r)eset or (q)uit any time.");
     println!(
-        "Enter a move as \"\x1b[31mrow\x1b[0m\x1b[34mcol\x1b[0m\" like \"\x1b[31m4\x1b[0m\x1b[34m3\x1b[0m\""
+        "Enter a move as \"\x1b[34mrow\x1b[0m\x1b[31mcol\x1b[0m\" like \"\x1b[34m4\x1b[0m\x1b[31m3\x1b[0m\""
     );
     println!("{:#}", tracked.board);
 
@@ -333,6 +294,7 @@ fn player_vs_ai(depth: u8) {
                 print!("\x1B[2J\x1B[1;1H");
                 println!("{:#}", tracked.board);
 
+                input_buffer.make_ascii_lowercase();
                 match input_buffer.trim() {
                     "u" | "r" => {
                         // Undoing sets the is_game_over to false. This ensures that if the player
@@ -341,12 +303,12 @@ fn player_vs_ai(depth: u8) {
                         // AI sneaking a move in.
                         is_player_turn = true;
                         continue;
-                    },
+                    }
                     "h" if !is_game_over => {
                         let (_, mov) = ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
                         println!("How about {mov:?}?");
                         continue;
-                    },
+                    }
                     "hd" if !is_game_over => {
                         let (_, (row, col)) =
                             ai_x_hinter.calculate_move_par(&tracked.board, depth + 2);
@@ -355,7 +317,7 @@ fn player_vs_ai(depth: u8) {
                     _ => {
                         println!("\x1b[41m Invalid! \x1b[0m");
                         continue;
-                    },
+                    }
                 }
             }
         } else {
@@ -367,7 +329,8 @@ fn player_vs_ai(depth: u8) {
             let norm = normalise(eval as f32, -5700., 5700.);
 
             get_eval_bar(norm, 30, &mut ai_eval_buffer);
-            ai_messages.push_str(format!("Score: {eval} -> {norm:.2}\n{ai_eval_buffer}").as_str());
+            // ai_messages.push_str(format!("Score: {eval} -> {norm:.2}\n{ai_eval_buffer}").as_str());
+            ai_messages.push_str(format!("Score {:.2}%\n{ai_eval_buffer}", norm * 100.).as_str());
 
             // Adapatively select display units
             let duration = match elapsed.as_micros() {
@@ -438,8 +401,8 @@ fn ask_move(
         *is_game_over = false;
         // undo twice for the Player versus AI
         // unless the player made the last move and won the game. then undo once.
-        // get last move, get cell, cmp player piece 
-        let (row, col)  = tracked.board.last_move;
+        // get last move, get cell, cmp player piece
+        let (row, col) = tracked.board.last_move;
         let lst_cell = tracked.board.get_cell(row, col);
 
         tracked.undo_move();

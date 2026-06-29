@@ -487,8 +487,6 @@ mod tests {
         board.set_status_of(0, 2);
         board.set_status_of(3, 2);
 
-        board.display_mb_statuses();
-
         let score = ai.evaluate(&board);
         assert_eq!(
             score,
@@ -506,7 +504,6 @@ mod tests {
         board.set_status_of(2, 2);
         board.set_status_of(8, 2);
 
-        board.display_mb_statuses();
         let score = ai.evaluate(&board);
 
         assert_eq!(score, SCORE_UNIT * BROKEN_MB_LINES * 5); // 6 - 1
