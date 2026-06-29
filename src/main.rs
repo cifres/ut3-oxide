@@ -219,7 +219,7 @@ fn ai_vs_ai(args: &mut std::env::Args) {
     for _ in 0..iterations {
         loop {
             // Due to turns % 2, whoever does the finishing move starts second. Thus they swap
-            // who plays first.
+            // who plays first
             let i = total_turns as usize % 2;
             let ai = ai_xo[i];
             let depth = ai_xo_depth[i];
@@ -269,15 +269,24 @@ fn player_vs_ai(depth: u8) {
     let ai_o = AI::new(bitflag::O_PLAYER);
     let mut tracked = TrackedBoard::new(Board::new());
     let mut is_game_over = false;
-    let mut input_buffer = String::with_capacity(2);
-
     let mut is_player_turn = true;
+
+    let mut input_buffer = String::with_capacity(3);
     let mut ai_messages = String::with_capacity(760);
     let mut ai_eval_buffer = String::with_capacity(40);
     let ai_x_hinter = AI::new(bitflag::X_PLAYER);
 
+    // 0 defaults to 5
+    let difficulty = match depth {
+        1..=3 => "Easy",
+        0 | 4..=7 => "Medium",
+        8..=10 => "Hard",
+        11.. => "Extreme",
+    };
+
     print!("\x1B[2J\x1B[1;1H");
-    println!("Welcome! You may get a (h)int, (u)ndo, (r)eset or (q)uit any time.");
+    println!("Welcome to \x1b[1mPlayer vs AI\x1b[0m ─ {difficulty}");
+    println!("You may get a (h)int, (u)ndo, (r)eset or (q)uit any time");
     println!(
         "Enter a move as \"\x1b[34mrow\x1b[0m\x1b[31mcol\x1b[0m\" like \"\x1b[34m4\x1b[0m\x1b[31m3\x1b[0m\""
     );
@@ -300,7 +309,7 @@ fn player_vs_ai(depth: u8) {
                         // Undoing sets the is_game_over to false. This ensures that if the player
                         // made the winning move, even though it becomes the AI's turn technically
                         // thereafter, undoing will yield control back to the player rather than the
-                        // AI sneaking a move in.
+                        // AI sneaking a move in
                         is_player_turn = true;
                         continue;
                     }
@@ -330,7 +339,7 @@ fn player_vs_ai(depth: u8) {
 
             get_eval_bar(norm, 30, &mut ai_eval_buffer);
             // ai_messages.push_str(format!("Score: {eval} -> {norm:.2}\n{ai_eval_buffer}").as_str());
-            ai_messages.push_str(format!("Score {:.2}%\n{ai_eval_buffer}", norm * 100.).as_str());
+            ai_messages.push_str(format!("Confidence {:.2}%\n{ai_eval_buffer}", norm * 100.).as_str());
 
             // Adapatively select display units
             let duration = match elapsed.as_micros() {
@@ -400,7 +409,7 @@ fn ask_move(
     if input == "u" {
         *is_game_over = false;
         // undo twice for the Player versus AI
-        // unless the player made the last move and won the game. then undo once.
+        // unless the player made the last move and won the game. then undo once
         // get last move, get cell, cmp player piece
         let (row, col) = tracked.board.last_move;
         let lst_cell = tracked.board.get_cell(row, col);
