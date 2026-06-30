@@ -29,7 +29,7 @@ const DEPTH: u8 = 5;
 ///
 /// Winning lines composed into continuous and broken line patterns
 /// Where a winning line is a group of xy coords in a triplet from [a, b, c] to continuous and
-/// broken like this: 
+/// broken like this:
 ///
 /// `Continuous` `[a, b, b, c]      `
 /// `Broken`     `[a, c]            `
@@ -106,12 +106,21 @@ impl AI {
     pub fn calculate_move_par(self, board: &Board, depth: u8) -> (i16, (u8, u8)) {
         let depth = if depth > 0 { depth } else { DEPTH };
 
-        let bstmv = board
-            .valid_moves()
+        // Order is weakest to strongest so reverse it to get stronger moves first and prune early
+        let ordered = self.get_ordered_moves(board);
+        let bstmv = ordered
+            .iter()
+            .rev()
             .par_bridge()
-            .map(|(row, column)| {
+            .map(|&(row, column)| {
                 let mut board = board.clone();
                 board.do_move(row, column, self.ai_shape);
+
+                // Priortise immediate wins -- eval fn returns MAX - 1 to depriortise delayed wins
+                if board.calculate_game_status() == self.ai_shape {
+                    return (i16::MAX, (row, column));
+                }
+
                 let score = self.alphabeta_mm(&mut board, depth - 1, i16::MIN, i16::MAX, false);
                 (score, (row, column))
             })
@@ -177,6 +186,25 @@ impl AI {
         }
     }
 
+    /// Orders moves in ascending order from weakest to strongest using soft evaluation
+    fn get_ordered_moves(self, board: &Board) -> Vec<(u8, u8)> {
+        let mut moves = board.valid_moves().collect::<Vec<_>>();
+        let shape = self.ai_shape;
+
+        // TODO: corner and centre MBs soft eval
+        moves.sort_by_key(|&(r, c)| {
+            let mut board = board.clone();
+
+            let wins_pre = board.get_miniboard_win_count_of(shape);
+            board.do_move(r, c, shape);
+            let wins_post = board.get_miniboard_win_count_of(shape);
+
+            wins_post - wins_pre
+        });
+
+        moves
+    }
+
     // Winning = `i16::MAX`, Drawing = 0, Losing = `i16::MIN`
     // ± score for:
     // * won/lost miniboards
@@ -200,7 +228,9 @@ impl AI {
         if game_status == self.opponent_shape {
             return i16::MIN;
         } else if game_status == self.ai_shape {
-            return i16::MAX;
+            // MAX - 1 to depriortise delayed wins later in the game tree compared to immediate wins
+            // in `calculate_move_par`
+            return i16::MAX - 1;
         }
 
         let mut score = 0;
@@ -407,6 +437,22 @@ impl AI {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn ordered() {
+        let ai = AI::default();
+        let mut board = Board::new();
+
+        board.do_move(3, 3, ai.ai_shape);
+        board.do_move(3, 4, ai.ai_shape);
+        board.do_move(5, 3, ai.ai_shape);
+        board.do_move(1, 4, ai.opponent_shape);
+
+        let ordmv = ai.get_ordered_moves(&board);
+        let len = ordmv.len();
+        let vs = &ordmv[len - 2..len];
+        assert_eq!(vs, &[(3, 5), (4, 3)]);
+    }
 
     #[test]
     pub(crate) fn ai_evaluate() {
