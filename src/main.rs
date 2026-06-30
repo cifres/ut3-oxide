@@ -350,8 +350,6 @@ fn player_vs_ai(depth: u8) {
             ai_messages.push_str(
                 format!("\n\nAI @ depth {depth} in {duration}: ({row}, {column})\n").as_str(),
             );
-
-            println!("end {}", ai_messages.capacity());
         }
 
         // Clear and redraw

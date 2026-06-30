@@ -97,7 +97,6 @@ impl Board {
             return false;
         }
 
-        //println!("valid {:?}", (row, column));
         true
     }
 
@@ -212,8 +211,8 @@ impl Board {
             return false;
         }
 
-        // cheap check because logically you auto-win a miniboard if you win 7 moves in it
-        // 7 Xs for example guarentee that X has won that miniboard
+        // cheap check because logically you auto-win a miniboard if you have 7 moves in it
+        // 7 Xs for example guarantee that X has won that miniboard
         if player_move_count > 6 {
             self.set_status_of(miniboard, last_player);
             return true;
