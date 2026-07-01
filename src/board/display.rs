@@ -97,7 +97,8 @@ impl fmt::Display for Board {
                     // where the each character includes a space after it and thus relies on the
                     // previous character's space
                     let repr = match (cell, cellmbstatus) {
-                        (0, _) if self.is_valid_move(row, col) => "\x1b[32m─ \x1b[0m",
+                        (0, _) if self.is_valid_move(row, col) && self.is_first_move() => "\x1b[1;32m─ \x1b[0m",
+                        (0, _) if self.is_valid_move(row, col) => "\x1b[1;5;32m─ \x1b[0m",
                         (1, 1) if (row, col) == self.last_move => "\x08 \x08\x1b[1;5;44m X \x1b[0m",
                         (2, 2) if (row, col) == self.last_move => "\x08 \x08\x1b[1;5;41m O \x1b[0m",
                         (1, _) if (row, col) == self.last_move => " \x08 \x08\x1b[1;5;34mX\x1b[0m ",
