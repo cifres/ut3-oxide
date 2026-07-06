@@ -24,7 +24,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     // 211.28 μs @ depth 5 inline only no (always)
     // 125.14 μs @ depth 5
     // PC 124.14 μs @ depth 5 26/03/2025
-    // Laptop 172 μs @ depth 5 -- current best
+    // Laptop 167 μs @ depth 5 -- current best
     // PC 118~ μs @ depth 5
     // PC 112~ μs @ depth 5 -- current best
     group.bench_function("single-call-performance", |b| {
@@ -37,12 +37,12 @@ fn winrate_benchmark(c: &mut Criterion) {
     let aio = AI::default();
     board.reset();
     group.bench_function("single-ai-v-ai-playout", |b| {
-        b.iter(|| ai_vs_ai(board.clone(), &aix, &aio));
+        b.iter(|| ai_vs_ai(board, &aix, &aio));
     });
 
     let rng = rand::prelude::SmallRng::seed_from_u64(7);
     group.bench_function("single-playout", |b| {
-        b.iter(|| ai_single(board.clone(), &aio, rng.clone()));
+        b.iter(|| ai_single(board, &aio, rng.clone()));
     });
 
     // winrate: best 99.21% @ depth 5
@@ -61,13 +61,13 @@ fn winrate_benchmark(c: &mut Criterion) {
             total_turns += turns as u32;
             //total_moves += moves as u32;
             //running_avg_mov.push(moves as f32 / turns as f32);
-            if status == bitflag::O_PLAYER {
-                wins += 1;
-            } else if status == bitflag::STATUS_DRAW {
-                draws += 1;
-            } else if status == bitflag::X_PLAYER {
-                losses += 1;
+            match status {
+                bitflag::O_PLAYER => wins += 1,
+                bitflag::X_PLAYER => losses += 1,
+                bitflag::STATUS_DRAW => draws += 1,
+                 _ => unreachable!(),
             }
+
             status
         });
     });

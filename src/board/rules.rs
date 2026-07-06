@@ -119,7 +119,6 @@ impl Board {
     /// board.do_move(3, 3, bitflag::O_PLAYER);
     /// assert_eq!(board.valid_moves_bitfield(), 0b111000000111000000111);
     /// ```
-    // TODO: order moves by importance?
     pub fn valid_moves_bitfield(&self) -> u128 {
         let mut moves_validity_bitfield = 0u128;
 

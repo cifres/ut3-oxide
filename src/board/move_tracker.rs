@@ -16,7 +16,7 @@ impl TrackedBoard {
     }
 
     pub fn do_move(&mut self, row: u8, column: u8, player: u8) {
-        self.history.push(self.board.clone());
+        self.history.push(self.board);
         self.board.do_move(row, column, player);
     }
 
