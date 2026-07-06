@@ -26,6 +26,7 @@ prototype [playable here](https://utttai.netlify.app/) by having:
   - With friends via local multiplayer
   - Against a bot with varying levels of difficulty
   - AI versus AI
+- Clearer UI
 - Substantial performance improvements (1000x)
 
 Additionally, the project enabled deepening my understanding of binary and
@@ -34,7 +35,8 @@ bitwise operations in a performance context
 ## Quick Start
 
 To try it out, download a pre-compiled binary for
-your system from the [releases](releases), then run the following in a terminal:
+your system from the [releases](https://github.com/cifres/ut3-oxide/releases),
+then run the following in a terminal:
 
 ```bash
 ./ut3_oxide pva
@@ -45,10 +47,10 @@ your system from the [releases](releases), then run the following in a terminal:
 > [!NOTE]
 > [Rust](https://rust-lang.org/tools/install) must be installed and on `path`.
 > [Git](https://git-scm.com/install) is standard, but you can
-> [download](releases) the source code manually.
+> download the source code manually from the [releases](https://github.com/cifres/ut3-oxide/releases).
 
 ```bash
-# Clone or manually download from the releases
+# Clone or manually download from releases
 git clone github.com/cifres/ut3-oxide
 
 # Change directory and build
@@ -68,18 +70,27 @@ cargo bench --profile release
 
 | Command | Meaning | Notes |
 | --------------- | --------------- | ----- |
-| `tutorial` | Guided interactive exploration of rules |  Follow the tutorial then optionally play a practice match |
-| `pvp`      | Player vs. Player                       | `(u)ndo`, `(r)eset`, `(q)uit` available                    |
-| `pva`      | Player vs. AI                           | `(h)int`, `(u)ndo`, `(r)eset`, `(q)uit` available          |
-| `ava`      | AI vs. AI                               | Will report the results at the end                         |
-| `help`     | Print the help message                  | Provides example usage of each command                     |
+| `tutorial` | Guided interactive exploration of rules | Follow the tutorial then optionally play a practice match |
+| `pvp` | Player vs. Player | `(u)ndo`, `(r)eset`, `(q)uit` available in match |
+| `pva` | Player vs. AI | `(h)int`, `(u)ndo`, `(r)eset`, `(q)uit` available in match |
+| `ava` | AI vs. AI | Reports the results at the end |
+| `help` | Print the help message | Provides example usage of each command |
 
 ### Examples
+
+> [!IMPORTANT]
+> `Depth`'s *parity*, i.e. whether it is odd or even, affects the
+> AI's play style! An odd parity results in slightly more
+> optimistic/aggressive whereas an even parity considerate. This is partly due
+> to the [*horizon effect*](https://en.wikipedia.org/wiki/Horizon_effect)
+> where the AI stops evaluation a position when the next move flips the tables
+unexpectedly.
 
 ```bash
 # ./ut3_oxide pva [depth=5]
 ./ut3_oxide pva
 ./ut3_oxide pva 8
+./ut3_oxide pva 4
 ```
 
 Alternatively, you may pit two AIs against each other at specified search
@@ -87,7 +98,7 @@ depths. Both AIs look 5 moves ahead per turn, play 100 games total, and
 report the results:
 
 > [!NOTE]
-> Delay is in milliseconds but will only be used if `show` is `1`.
+> Delay is in *milliseconds* but will only be used if `show` is `1`.
 
 ```bash
 # ./ut3_oxide <depth_ai_x> <depth_ai_o> <repetitions> [show=0] [delay=500]
@@ -99,10 +110,11 @@ wr @ depth 5 O: 39.00% (39/100)
         — draws: 8.00% (8/100)
 ```
 
-To watch them play move-by-move for 1 game, waiting 1 second between turns:
+AIs play move-by-move at depth `7` for `1` game, waiting `1` second (`1000ms`)
+between turns:
 
 ```bash
-./ut3_oxide ava 7 7 10 1 1000
+./ut3_oxide ava 7 7 1 1 1000
 ```
 
 ![Sample gameplay of AI vs. AI](assets/ava.gif)
@@ -133,12 +145,11 @@ win by coercing your opponent into letting you win.
 
 ## Future Work
 
-Future work may comprise of the following enhancements:
+Future work may comprise of these enhancements:
 
 - Online multiplayer
 - UI upgrade
-- Clearer user feedback:
-  - SFX and VFX for moves, miniboard wins
+- Clearer user feedback; SFX and VFX
 
 [^1]: Sometimes localised as 'Noughts and Crosses' or 'Xs and Os'.
 [^2]: A *miniboard* that is not full nor has neither player won; a

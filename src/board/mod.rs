@@ -33,7 +33,7 @@ pub mod bitflag {
     /// Not part of row metadata; used for `board.xo_miniboard_win_count`
     pub const MINIBOARD_WIN_COUNT_MASK      : u8 = 0b111;
 
-    /// These are not magic coordintes. See [`Board.is_first_move`]
+    /// These are not magic coordintes. See `Board::is_first_move`
     pub const NEW_GAME                      : (u8, u8) = (0, 0);
 }
 
@@ -282,7 +282,7 @@ impl Board {
 
     /////* Moves */////
 
-    /// Applies the move but doesn't check validity with `self.is_valid_move`, or apply
+    /// Applies the move but doesn't check validity with [`Board::is_valid_move`], or apply
     /// minboard status checks
     /// # Example
     /// ```
