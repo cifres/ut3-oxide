@@ -30,7 +30,7 @@ pub mod bitflag {
     pub const MINIBOARD_MOVE_COUNT_O_POS    : u8 = 24;
     pub const MINIBOARD_MOVE_COUNT_TOTAL_POS: u8 = 28;
 
-    /// Not part of row metadata; used for `board.xo_miniboard_win_count`
+    /// Not part of row metadata; used for `Board::xo_miniboard_win_count`
     pub const MINIBOARD_WIN_COUNT_MASK      : u8 = 0b111;
 
     /// These are not magic coordintes. See `Board::is_first_move`
@@ -45,7 +45,7 @@ pub mod bitflag {
 ///     * meta data `[0000 — 0000 — 0000 — 00]`
 ///         * `4` bits `move_count_total` — `move_count` `O` `4` bits — `move_count` `X` `4` bits — `miniboard_status` `2` bits
 /// `xo_miniboard_win_count`: `[00 — 000 — 000]` -> `[empty — O win count — X win count]`
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Board {
     pub main_board: [u32; 9],
     pub last_move: (u8, u8), // The last valid move that was made

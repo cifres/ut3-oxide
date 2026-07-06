@@ -113,7 +113,7 @@ impl AI {
             .rev()
             .par_bridge()
             .map(|&(row, column)| {
-                let mut board = board.clone();
+                let mut board = *board;
                 board.do_move(row, column, self.ai_shape);
 
                 // Priortise immediate wins -- eval fn returns MAX - 1 to depriortise delayed wins
@@ -152,13 +152,13 @@ impl AI {
         is_max: bool,
     ) -> i16 {
         if depth == 0 || board.calculate_game_status() != bitflag::STATUS_CONTESTABLE {
-            return self.evaluate(board);
+            return self.evaluate(*board);
         }
 
         if is_max {
             let mut score = i16::MIN;
             for (row, column) in board.valid_moves() {
-                let mut board = board.clone();
+                let mut board = *board;
                 board.do_move(row, column, self.ai_shape);
                 score = score.max(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, false));
                 //score = score.max(self.alphabeta_mm(board, depth - 1, alpha, beta, false));
@@ -173,7 +173,7 @@ impl AI {
         } else {
             let mut score = i16::MAX;
             for (row, column) in board.valid_moves() {
-                let mut board = board.clone();
+                let mut board = *board;
                 board.do_move(row, column, self.opponent_shape);
                 score = score.min(self.alphabeta_mm(&mut board, depth - 1, alpha, beta, true));
                 beta = beta.min(score);
@@ -193,7 +193,7 @@ impl AI {
 
         // TODO: corner and centre MBs soft eval
         moves.sort_by_key(|&(r, c)| {
-            let mut board = board.clone();
+            let mut board = *board;
 
             let wins_pre = board.get_miniboard_win_count_of(shape);
             board.do_move(r, c, shape);
@@ -221,9 +221,9 @@ impl AI {
     /// # use ut3_oxide::{board::Board, ai::AI};
     /// let mut board = Board::new();
     /// let aio = AI::default();
-    /// let eval = aio.evaluate(&board);
+    /// let eval = aio.evaluate(board);
     /// ```
-    pub fn evaluate(&self, board: &Board) -> i16 {
+    pub fn evaluate(&self, board: Board) -> i16 {
         let game_status = board.calculate_game_status();
         if game_status == self.opponent_shape {
             return i16::MIN;
@@ -257,7 +257,7 @@ impl AI {
         // println!("@ centre mb {score}");
 
         // Produces repeating 0b001100 across the 18-bit range
-        const REP_UNIT: u32 = ((1 << 18) - 1) / 0b111111;
+        const REP_UNIT: u32 = ((1 << 18) - 1) / 0b111_111;
         let ai_centre_cell_mask = REP_UNIT * ((self.ai_shape as u32) << 2);
         let opp_centre_cell_mask = REP_UNIT * ((self.opponent_shape as u32) << 2);
         // row-by-row get the centre cell of each miniboard
@@ -409,7 +409,6 @@ impl AI {
 
         // free board = board with a cell that redirects to its board
         // e.g. 0, 0 -> 0, 4, 4 -> mb 4, 8, 8 -> 8
-        // TODO: explore why .into_iter is up to 15% slower on some platforms
         for row in board.main_board.iter().step_by(4) {
             let first = (row & 0b11) as u8;
             let middle = ((row >> 8) & 0b11) as u8;
@@ -460,7 +459,7 @@ mod tests {
         let mut board = Board::new();
         board.do_move(3, 0, 2);
 
-        let score = ai.evaluate(&board);
+        let score = ai.evaluate(board);
         assert_eq!(score, 0);
 
         // winning the centre cell and miniboard
@@ -468,8 +467,8 @@ mod tests {
         board.do_move(4, 4, 2);
         board.do_move(5, 5, 2);
         let _ = board.calculate_game_status();
-        let score = ai.evaluate(&board);
-        // TODO: check score chain leading up to cells continuous/unconnected check
+        let score = ai.evaluate(board);
+
         assert_eq!(
             score,
             SCORE_UNIT * MINIBOARD_WIN_COUNT
@@ -487,7 +486,7 @@ mod tests {
         board.do_move(4, 4, 1);
         board.do_move(5, 5, 1);
         let _ = board.calculate_game_status();
-        let score = ai.evaluate(&board);
+        let score = ai.evaluate(board);
         assert_eq!(
             score,
             -SCORE_UNIT * CENTRE_MB_CONTROL
@@ -513,7 +512,7 @@ mod tests {
         board.do_move(3, 1, 1);
         board.do_move(3, 2, 1);
 
-        let score = ai.evaluate(&board);
+        let score = ai.evaluate(board);
         assert_eq!(
             score,
             SCORE_UNIT * MINIBOARD_WIN_COUNT // 2 - 1
@@ -533,7 +532,7 @@ mod tests {
         board.set_status_of(0, 2);
         board.set_status_of(3, 2);
 
-        let score = ai.evaluate(&board);
+        let score = ai.evaluate(board);
         assert_eq!(
             score,
             SCORE_UNIT * CONTINUOUS_MB_LINES * 2 + SCORE_UNIT * BROKEN_MB_LINES * 2
@@ -550,7 +549,7 @@ mod tests {
         board.set_status_of(2, 2);
         board.set_status_of(8, 2);
 
-        let score = ai.evaluate(&board);
+        let score = ai.evaluate(board);
 
         assert_eq!(score, SCORE_UNIT * BROKEN_MB_LINES * 5); // 6 - 1
 
@@ -564,7 +563,7 @@ mod tests {
         board.do_move(2, 3, 1);
 
         assert_eq!(
-            ai.evaluate(&board),
+            ai.evaluate(board),
             (1 - 2) * SCORE_UNIT * UNCONTESTABLE_MB_POINTED_AT
         );
     }
