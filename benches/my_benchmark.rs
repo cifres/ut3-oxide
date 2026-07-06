@@ -24,7 +24,7 @@ fn winrate_benchmark(c: &mut Criterion) {
     // 211.28 μs @ depth 5 inline only no (always)
     // 125.14 μs @ depth 5
     // PC 124.14 μs @ depth 5 26/03/2025
-    // Laptop 182 μs @ depth 5 -- current best
+    // Laptop 172 μs @ depth 5 -- current best
     // PC 118~ μs @ depth 5
     // PC 112~ μs @ depth 5 -- current best
     group.bench_function("single-call-performance", |b| {
