@@ -18,16 +18,14 @@ performance.
 
 ## Motivation
 
-UT3 Oxide is built to improve upon the
-[TypeScript](https://github.com/cifres/AI-UTTT-V2)
-prototype [playable here](https://utttai.netlify.app/) by having:
+UT3 Oxide improves upon the [prototype](https://utttai.netlify.app/) by having:
 
 - Offline play:
   - With friends via local multiplayer
   - Against a bot with varying levels of difficulty
   - AI versus AI
 - Clearer UI
-- Substantial performance improvements (1000x)
+- Substantial performance improvements
 
 Additionally, the project enabled deepening my understanding of binary and
 bitwise operations in a performance context
@@ -41,6 +39,14 @@ then run the following in a terminal:
 ```bash
 ./ut3_oxide pva
 ```
+
+If you're on Linux, remember to make it executable first:
+
+```bash
+chmod +x ut3_oxide_x86_64.AppImage
+```
+
+`pva` is a *command* for the 'Player versus AI' mode. See other [commands](#usage).
 
 ## Building
 

@@ -1,5 +1,3 @@
-#![warn(clippy::pedantic)]
-
 mod ai;
 mod board;
 mod questions;

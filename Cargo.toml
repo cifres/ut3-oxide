@@ -38,3 +38,7 @@ strip = "none"
 opt-level = 3
 panic = "abort"
 debug = true
+
+[package.metadata.appimage]
+icon = "assets/icon.png"
+autolink = true
