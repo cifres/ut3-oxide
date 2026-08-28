@@ -1,6 +1,22 @@
-# UT3 Oxide
+<p align="center">
+  <img width="125" src="assets/icon.png" />
+</p>
 
-*you·tee·three ox·ide*
+<h1 align="center">UT3 Oxide</h1>
+
+<div align="center">
+<i>you·tee·three ox·ide</i>
+</div>
+
+<br />
+
+<div align="center">
+  <img src="https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white" alt="Rust" />
+  <img src="https://img.shields.io/github/license/cifres/ut3-oxide?style=for-the-badge" alt="license" />
+  <img src="https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white" alt="actions" />
+</div>
+
+<br />
 
 A performant command-line program to play *Ultimate* Tic Tac Toe featuring an
 Alpha-Beta pruning AI, and local multiplayer.
