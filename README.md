@@ -43,9 +43,6 @@ UT3 Oxide improves upon the [prototype](https://utttai.netlify.app/) by having:
 - Clearer UI
 - Substantial performance improvements
 
-Additionally, the project enabled deepening my understanding of binary and
-bitwise operations in a performance context
-
 ## Quick Start
 
 To try it out, download a pre-compiled binary for
@@ -65,7 +62,7 @@ then run the following in a terminal:
 
 ```bash
 # Clone or manually download from releases
-git clone github.com/cifres/ut3-oxide
+git clone https://github.com/cifres/ut3-oxide.git
 
 # Change directory and build
 cd ut3-oxide
